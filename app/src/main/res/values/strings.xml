@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PawPlay</string>
+    <string name="home_title">PawPlay</string>
+    <string name="home_subtitle">A game for your cat</string>
+    <string name="play_now">Play Now</string>
+    <string name="content_library">Content Library</string>
+    <string name="settings">Settings</string>
+    <string name="toys">Toys</string>
+    <string name="backgrounds">Backgrounds</string>
+    <string name="unlock_pro">Unlock Pro</string>
+    <string name="restore_purchase">Restore Purchase</string>
+    <string name="pro_title">Go Pro</string>
+    <string name="pro_subtitle">Unlock all toys, backgrounds &amp; remove ads</string>
+    <string name="pro_onetime">One-time Purchase</string>
+    <string name="pro_yearly">Yearly Subscription</string>
+    <string name="free_label">FREE</string>
+    <string name="pro_label">PRO</string>
+    <string name="sound_effects">Sound Effects</string>
+    <string name="background_music">Background Music</string>
+    <string name="movement_speed">Movement Speed</string>
+    <string name="prey_count">Prey Count</string>
+    <string name="keep_screen_on">Keep Screen On</string>
+    <string name="haptic_feedback">Haptic Feedback</string>
+    <string name="speed_slow">Slow</string>
+    <string name="speed_medium">Medium</string>
+    <string name="speed_fast">Fast</string>
+    <string name="locked">Locked</string>
+    <string name="selected">Selected</string>
+</resources>
