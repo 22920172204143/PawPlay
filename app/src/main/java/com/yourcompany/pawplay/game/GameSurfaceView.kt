@@ -15,11 +15,12 @@ class GameSurfaceView @JvmOverloads constructor(
     val renderer = GameRenderer(holder)
     private var gameLoop: GameLoop? = null
 
-    var onTouchCallback: ((Float, Float) -> Unit)? = null
-
     init {
         holder.addCallback(this)
         isFocusable = true
+        BackgroundRenderer.init(context)
+        DirectSpriteDrawer.init(context)
+        SpritePreyDrawer.init(context)
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -50,10 +51,23 @@ class GameSurfaceView @JvmOverloads constructor(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val idx = event.actionIndex
-                val x = event.getX(idx)
-                val y = event.getY(idx)
-                renderer.onTouch(x, y)
-                onTouchCallback?.invoke(x, y)
+                val pointerId = event.getPointerId(idx)
+                renderer.onTouchDown(pointerId, event.getX(idx), event.getY(idx))
+            }
+            MotionEvent.ACTION_MOVE -> {
+                for (i in 0 until event.pointerCount) {
+                    val pid = event.getPointerId(i)
+                    renderer.onTouchMove(pid, event.getX(i), event.getY(i))
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val idx = event.actionIndex
+                renderer.onTouchUp(event.getPointerId(idx))
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                for (i in 0 until event.pointerCount) {
+                    renderer.onTouchUp(event.getPointerId(i))
+                }
             }
         }
         return true
