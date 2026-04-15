@@ -184,15 +184,15 @@ class PreyEntity(
 
     fun draw(canvas: Canvas, deltaSeconds: Float = 0.016f) {
         if (isHit) return
-        if (DirectSpriteDrawer.hasModel(toy.id)) {
-            DirectSpriteDrawer.drawPrey(
+        if (SpritePreyDrawer.hasModel(toy.id)) {
+            SpritePreyDrawer.drawPrey(
                 canvas, toy.id,
                 position.x, position.y, toy.displaySize,
                 deltaSeconds,
                 heading, currentSpeed, scaleX, scaleY, headLead
             )
-        } else if (SpritePreyDrawer.hasModel(toy.id)) {
-            SpritePreyDrawer.drawPrey(
+        } else if (DirectSpriteDrawer.hasModel(toy.id)) {
+            DirectSpriteDrawer.drawPrey(
                 canvas, toy.id,
                 position.x, position.y, toy.displaySize,
                 deltaSeconds,

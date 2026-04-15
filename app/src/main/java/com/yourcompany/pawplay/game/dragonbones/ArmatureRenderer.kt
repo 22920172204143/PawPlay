@@ -44,9 +44,11 @@ class ArmatureRenderer(
 
             srcRect.set(region.x, region.y, region.x + region.width, region.y + region.height)
 
-            val hw = region.width / 2f
-            val hh = region.height / 2f
-            dstRect.set(-hw, -hh, hw, hh)
+            val frameWidth = if (region.frameWidth > 0) region.frameWidth.toFloat() else region.width.toFloat()
+            val frameHeight = if (region.frameHeight > 0) region.frameHeight.toFloat() else region.height.toFloat()
+            val left = -frameWidth / 2f - region.frameX
+            val top = -frameHeight / 2f - region.frameY
+            dstRect.set(left, top, left + region.width, top + region.height)
 
             slotMatrix.set(slot.bone.worldMatrix)
 

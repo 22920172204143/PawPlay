@@ -90,22 +90,48 @@ object DBSkeletonParser {
         val name = obj.optString("name", "")
         val slotsMap = mutableMapOf<String, DBSkinSlotData>()
 
-        val slotObj = obj.optJSONObject("slot") ?: return DBSkinData(name, slotsMap)
-
-        val keys = slotObj.keys()
-        while (keys.hasNext()) {
-            val slotName = keys.next()
-            val dispArr = slotObj.getJSONArray(slotName)
-            val displays = mutableListOf<DBDisplayData>()
-            for (i in 0 until dispArr.length()) {
-                val d = dispArr.getJSONObject(i)
-                displays.add(
-                    DBDisplayData(
-                        name = d.optString("name", ""),
-                        type = d.optString("type", "image"),
-                        transform = parseTransform(d.optJSONObject("transform"))
+        val slotObj = obj.optJSONObject("slot")
+        if (slotObj != null) {
+            val keys = slotObj.keys()
+            while (keys.hasNext()) {
+                val slotName = keys.next()
+                val dispArr = slotObj.getJSONArray(slotName)
+                val displays = mutableListOf<DBDisplayData>()
+                for (i in 0 until dispArr.length()) {
+                    val d = dispArr.getJSONObject(i)
+                    displays.add(
+                        DBDisplayData(
+                            name = d.optString("name", ""),
+                            type = d.optString("type", "image"),
+                            transform = parseTransform(d.optJSONObject("transform"))
+                        )
                     )
-                )
+                }
+                slotsMap[slotName] = DBSkinSlotData(slotName, displays)
+            }
+            return DBSkinData(name, slotsMap)
+        }
+
+        val slotArr = obj.optJSONArray("slot") ?: return DBSkinData(name, slotsMap)
+        for (i in 0 until slotArr.length()) {
+            val slot = slotArr.getJSONObject(i)
+            val slotName = slot.optString("name", "")
+            if (slotName.isEmpty()) {
+                continue
+            }
+            val dispArr = slot.optJSONArray("display")
+            val displays = mutableListOf<DBDisplayData>()
+            if (dispArr != null) {
+                for (j in 0 until dispArr.length()) {
+                    val d = dispArr.getJSONObject(j)
+                    displays.add(
+                        DBDisplayData(
+                            name = d.optString("name", ""),
+                            type = d.optString("type", "image"),
+                            transform = parseTransform(d.optJSONObject("transform"))
+                        )
+                    )
+                }
             }
             slotsMap[slotName] = DBSkinSlotData(slotName, displays)
         }

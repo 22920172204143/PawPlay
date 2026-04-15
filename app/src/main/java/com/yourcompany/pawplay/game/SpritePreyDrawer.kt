@@ -17,6 +17,8 @@ import kotlin.math.sin
 
 object SpritePreyDrawer {
 
+    private const val BUG_FORWARD_ANGLE_DEG = 158f
+
     private data class LoadedModel(
         val armature: Armature,
         val renderer: ArmatureRenderer,
@@ -82,7 +84,16 @@ object SpritePreyDrawer {
             }
 
             val renderer = ArmatureRenderer(atlas, texture)
-            val designSize = 200f
+            val designSize = if (toyId == 1 && armature.bones.containsKey("bone")) {
+                atlas.regions.values.maxOfOrNull {
+                    maxOf(
+                        it.frameWidth.takeIf { width -> width > 0 } ?: it.width,
+                        it.frameHeight.takeIf { height -> height > 0 } ?: it.height
+                    )
+                }?.toFloat() ?: 200f
+            } else {
+                200f
+            }
 
             models[toyId] = LoadedModel(armature, renderer, designSize)
         } catch (_: Exception) {
@@ -122,35 +133,55 @@ object SpritePreyDrawer {
         headLead: Float = 0f
     ) {
         val model = models[toyId] ?: return
+        val arm = model.armature
+        val isExportedBugModel = toyId == 1 && arm.bones.containsKey("bone")
 
-        model.armature.setOverrideRotation("root", heading)
+        val rootRotation = if (isExportedBugModel) {
+            heading - BUG_FORWARD_ANGLE_DEG
+        } else {
+            heading
+        }
+        arm.setOverrideRotation("root", rootRotation)
 
-        if (model.armature.bones.containsKey("head")) {
-            model.armature.setOverrideRotation("head", headLead)
+        if (!isExportedBugModel && arm.bones.containsKey("head")) {
+            arm.setOverrideRotation("head", headLead)
         }
 
-        model.armature.setOverrideScale("body", scaleX, scaleY)
+        if (isExportedBugModel) {
+            arm.setOverrideScale("bone", scaleX, scaleY)
+            arm.setOverrideRotation("bone", headLead * 0.12f)
+        } else {
+            arm.setOverrideScale("body", scaleX, scaleY)
+        }
 
         val wingFreq = 15f + speed * 2f
         model.wingPhase += dt * wingFreq
         val wingAngle = sin(model.wingPhase.toDouble()).toFloat() * 25f
 
-        val arm = model.armature
-        if (arm.bones.containsKey("wing_l")) {
-            arm.setOverrideRotation("wing_l", wingAngle)
-        }
-        if (arm.bones.containsKey("wing_r")) {
-            arm.setOverrideRotation("wing_r", -wingAngle)
+        if (isExportedBugModel) {
+            if (arm.bones.containsKey("bone1")) {
+                arm.setOverrideRotation("bone1", wingAngle * 0.8f)
+            }
+            if (arm.bones.containsKey("bone2")) {
+                arm.setOverrideRotation("bone2", -wingAngle)
+            }
+        } else {
+            if (arm.bones.containsKey("wing_l")) {
+                arm.setOverrideRotation("wing_l", wingAngle)
+            }
+            if (arm.bones.containsKey("wing_r")) {
+                arm.setOverrideRotation("wing_r", -wingAngle)
+            }
         }
 
         val antFreq = 2.5f + speed * 0.3f
         model.antennaPhase += dt * antFreq
         val antAngle = sin(model.antennaPhase.toDouble()).toFloat() * 12f
 
-        if (arm.bones.containsKey("ant_l")) {
+        if (!isExportedBugModel && arm.bones.containsKey("ant_l")) {
             arm.setOverrideRotation("ant_l", antAngle)
         }
-        if (arm.bones.containsKey("ant_r")) {
+        if (!isExportedBugModel && arm.bones.containsKey("ant_r")) {
             arm.setOverrideRotation("ant_r", -antAngle * 0.8f)
         }
 
