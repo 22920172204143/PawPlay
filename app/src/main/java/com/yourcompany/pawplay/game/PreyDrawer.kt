@@ -122,6 +122,15 @@ object PreyDrawer {
         c.drawCircle(0f, 0f, r, fill)
         fill.shader = null
 
+        // Subtle underside shading to separate the body from dark textured backgrounds.
+        fill.shader = RadialGradient(
+            r * 0.22f, r * 0.32f, r * 0.95f,
+            intArrayOf(Color.argb(78, 75, 22, 0), Color.argb(20, 50, 12, 0), Color.argb(0, 0, 0, 0)),
+            floatArrayOf(0f, 0.62f, 1f), Shader.TileMode.CLAMP
+        )
+        c.drawOval(-r * 0.8f, -r * 0.08f, r * 0.98f, r * 0.92f, fill)
+        fill.shader = null
+
         // Body segment lines
         stroke.color = Color.argb(80, 160, 80, 10)
         stroke.strokeWidth = r * 0.025f
@@ -151,6 +160,15 @@ object PreyDrawer {
             Color.rgb(210, 125, 18), Color.rgb(155, 75, 5), Shader.TileMode.CLAMP
         )
         c.drawCircle(headX, headY, headR, fill)
+        fill.shader = null
+
+        // Soft occlusion where the head tucks into the thorax.
+        fill.shader = RadialGradient(
+            headX + headR * 0.6f, headY + headR * 0.55f, headR * 0.95f,
+            intArrayOf(Color.argb(72, 70, 24, 0), Color.argb(18, 40, 10, 0), Color.argb(0, 0, 0, 0)),
+            floatArrayOf(0f, 0.58f, 1f), Shader.TileMode.CLAMP
+        )
+        c.drawOval(headX - headR * 0.15f, headY + headR * 0.05f, headX + headR * 1.2f, headY + headR * 1.15f, fill)
         fill.shader = null
 
         // Head spiral decoration
@@ -244,14 +262,22 @@ object PreyDrawer {
         c.drawPath(path, fill)
         fill.shader = null
 
+        // Inner depth near the rear half of the wing to keep it readable without hard outlining.
+        fill.shader = LinearGradient(
+            length * 0.25f, 0f, length, 0f,
+            Color.argb(0, 0, 0, 0), Color.argb(alpha / 7, 18, 110, 104), Shader.TileMode.CLAMP
+        )
+        c.drawOval(length * 0.18f, -width * 0.52f, length * 0.96f, width * 0.52f, fill)
+        fill.shader = null
+
         // Wing vein center line
-        stroke.color = Color.argb(alpha / 2, 160, 255, 245)
-        stroke.strokeWidth = 1.5f
+        stroke.color = Color.argb((alpha * 0.58f).toInt(), 168, 255, 245)
+        stroke.strokeWidth = 1.8f
         c.drawLine(0f, 0f, length * 0.9f, 0f, stroke)
 
         // Diagonal veins
-        stroke.strokeWidth = 0.8f
-        stroke.color = Color.argb(alpha / 3, 130, 240, 230)
+        stroke.strokeWidth = 1.0f
+        stroke.color = Color.argb((alpha * 0.38f).toInt(), 135, 238, 228)
         for (i in 1..3) {
             val vx = length * i * 0.22f
             c.drawLine(vx, 0f, vx + length * 0.12f, -width * 0.4f, stroke)
