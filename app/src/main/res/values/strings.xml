@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PawPlay</string>
-    <string name="home_title">PawPlay</string>
-    <string name="home_subtitle">A game for your cat</string>
+    <string name="app_name">爪爪猎场</string>
+    <string name="home_title">爪爪猎场</string>
+    <string name="home_subtitle">PawHunt</string>
     <string name="play_now">Play Now</string>
     <string name="content_library">Content Library</string>
     <string name="settings">Settings</string>
