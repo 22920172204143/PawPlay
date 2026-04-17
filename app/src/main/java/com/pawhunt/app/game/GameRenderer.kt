@@ -65,6 +65,8 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
         }
         if (attracting) {
             soundManager?.startCatCall()
+        } else {
+            soundManager?.startPreyLoop(toy.name)
         }
     }
 
@@ -181,11 +183,8 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
                 synchronized(hitEffects) {
                     hitEffects.add(HitEffect(pos, hit.toy.primaryColor))
                 }
-                soundManager?.playHit(hit.toy.name)
+                soundManager?.playHit()
                 onHit?.invoke(pos)
-                // Immediately start next prey's sound for seamless transition
-                val nextToy = allToys[(currentToyIndex + 1) % allToys.size]
-                soundManager?.startPreyLoop(nextToy.name)
                 mainHandler.postDelayed({ spawnNextPrey() }, 600L)
             }
         }

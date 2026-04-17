@@ -17,7 +17,6 @@ class SoundManager(private val context: Context) {
     private val uiOpenId: Int
     private val uiCloseId: Int
 
-    private var hitCooldown = 0f
     private var preyLoopStreamId = 0
     private var catCallStreamId = 0
     private var catCallPending = false
@@ -89,8 +88,9 @@ class SoundManager(private val context: Context) {
         return soundMap[key] ?: 0
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun update(dt: Float) {
-        if (hitCooldown > 0f) hitCooldown -= dt
+        // reserved for future per-frame audio logic
     }
 
     fun startCatCall() {
@@ -137,20 +137,11 @@ class SoundManager(private val context: Context) {
     }
 
     /**
-     * Play one-shot hit sound when prey is caught.
-     * Stops the prey loop immediately for clean transition.
+     * Called when prey is caught. Stops the loop immediately.
+     * Hit sound effect will be added later (unified across all prey).
      */
-    fun playHit(toyName: String) {
+    fun playHit() {
         stopPreyLoop()
-        if (!enabled || hitCooldown > 0f) return
-        hitCooldown = 0.1f
-
-        val id = toyToSoundId(toyName)
-        if (id != 0) {
-            soundPool.play(id, 0.85f, 0.85f, 1, 0, 1f)
-        } else if (popSoundId != 0) {
-            soundPool.play(popSoundId, 0.6f, 0.6f, 1, 0, 1f)
-        }
     }
 
     /** Pause all audio (screen off / app background) */
