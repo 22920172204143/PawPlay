@@ -12,6 +12,7 @@ class SoundManager(private val context: Context) {
 
     private val soundPool: SoundPool
     private val popSoundId: Int
+    private val hitSoundId: Int
 
     private val soundMap = mutableMapOf<String, Int>()
     private val uiOpenId: Int
@@ -56,6 +57,7 @@ class SoundManager(private val context: Context) {
             .build()
 
         popSoundId = loadSoundSafe("pop")
+        hitSoundId = loadSoundSafe("sfx_hit")
         uiOpenId = loadSoundSafe("sfx_ui_open")
         uiCloseId = loadSoundSafe("sfx_ui_close")
 
@@ -137,11 +139,12 @@ class SoundManager(private val context: Context) {
     }
 
     /**
-     * Called when prey is caught. Stops the loop immediately.
-     * Hit sound effect will be added later (unified across all prey).
+     * Called when prey is caught. Stops the loop and plays the unified hit SFX.
      */
     fun playHit() {
         stopPreyLoop()
+        if (!enabled || hitSoundId == 0) return
+        soundPool.play(hitSoundId, 0.7f, 0.7f, 1, 0, 1f)
     }
 
     /** Pause all audio (screen off / app background) */
