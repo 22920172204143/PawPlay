@@ -38,6 +38,13 @@ class SoundManager(private val context: Context) {
         "Butterfly" to "sfx_hit_butterfly"
     )
 
+    /** Per-toy loop volume (default 0.5, boost quiet sources) */
+    private val toyLoopVolume = mapOf(
+        "Mouse"     to 0.9f,
+        "Butterfly" to 0.8f
+    )
+    private val defaultLoopVolume = 0.5f
+
     init {
         val attrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)
@@ -86,10 +93,6 @@ class SoundManager(private val context: Context) {
         if (hitCooldown > 0f) hitCooldown -= dt
     }
 
-    /**
-     * Start looping the cat-call sound to attract the cat.
-     * Handles SoundPool async load: if not yet ready, auto-plays when loaded.
-     */
     fun startCatCall() {
         stopCatCall()
         if (!enabled) return
@@ -122,7 +125,8 @@ class SoundManager(private val context: Context) {
         if (!enabled) return
         val id = toyToSoundId(toyName)
         if (id == 0) return
-        preyLoopStreamId = soundPool.play(id, 0.4f, 0.4f, 1, -1, 1f)
+        val vol = toyLoopVolume[toyName] ?: defaultLoopVolume
+        preyLoopStreamId = soundPool.play(id, vol, vol, 1, -1, 1f)
     }
 
     fun stopPreyLoop() {
@@ -134,9 +138,10 @@ class SoundManager(private val context: Context) {
 
     /**
      * Play one-shot hit sound when prey is caught.
-     * Does NOT stop the prey loop — let startPreyLoop handle the transition.
+     * Stops the prey loop immediately for clean transition.
      */
     fun playHit(toyName: String) {
+        stopPreyLoop()
         if (!enabled || hitCooldown > 0f) return
         hitCooldown = 0.1f
 
@@ -146,6 +151,16 @@ class SoundManager(private val context: Context) {
         } else if (popSoundId != 0) {
             soundPool.play(popSoundId, 0.6f, 0.6f, 1, 0, 1f)
         }
+    }
+
+    /** Pause all audio (screen off / app background) */
+    fun pauseAll() {
+        soundPool.autoPause()
+    }
+
+    /** Resume all audio (screen on / app foreground) */
+    fun resumeAll() {
+        soundPool.autoResume()
     }
 
     fun playPop() {

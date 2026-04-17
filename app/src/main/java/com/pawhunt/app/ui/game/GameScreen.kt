@@ -9,10 +9,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.pawhunt.app.game.GameSurfaceView
 import com.pawhunt.app.model.Toy
 import com.pawhunt.app.service.HapticManager
@@ -52,7 +55,8 @@ fun GameScreen(
     )
 
     val context = LocalContext.current
-    DisposableEffect(Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
         val activity = context as? android.app.Activity
         val window = activity?.window
         if (window != null) {
@@ -62,8 +66,20 @@ fun GameScreen(
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> soundManager?.pauseAll()
+                Lifecycle.Event.ON_RESUME -> soundManager?.resumeAll()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             gameSurfaceView?.stopGame()
+            soundManager?.stopCatCall()
+            soundManager?.stopPreyLoop()
             if (window != null) {
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
