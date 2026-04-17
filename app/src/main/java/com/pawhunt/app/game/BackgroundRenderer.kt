@@ -21,7 +21,7 @@ import kotlin.random.Random
 
 object BackgroundRenderer {
 
-    const val BG_COUNT = 5
+    const val BG_COUNT = 7
 
     private var cachedBgIndex = -99
     private var cachedBitmap: Bitmap? = null
@@ -34,7 +34,9 @@ object BackgroundRenderer {
         R.drawable.bg_grass,
         R.drawable.bg_stone,
         R.drawable.bg_wood,
-        0
+        0,
+        R.drawable.bg_leaves,
+        R.drawable.bg_wall
     )
 
     private val darkenScales = arrayOf(
@@ -42,7 +44,9 @@ object BackgroundRenderer {
         floatArrayOf(0.55f, 0.65f, 0.38f),
         floatArrayOf(0.50f, 0.45f, 0.42f),
         floatArrayOf(0.42f, 0.38f, 0.32f),
-        floatArrayOf(1f, 1f, 1f)
+        floatArrayOf(1f, 1f, 1f),
+        floatArrayOf(0.45f, 0.42f, 0.35f),
+        floatArrayOf(0.45f, 0.43f, 0.40f)
     )
 
     fun init(context: Context) {
