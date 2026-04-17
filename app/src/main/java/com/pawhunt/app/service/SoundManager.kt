@@ -29,11 +29,11 @@ class SoundManager(private val context: Context) {
     var enabled = true
 
     private val ambientResNames = arrayOf(
-        "amb_stone",
-        "amb_forest",
-        "amb_stone",
-        "amb_wood",
-        "amb_cute"
+        "amb_mulch",       // 0 Mulch  – cricket / garden
+        "amb_forest",      // 1 Grass  – bird chirps
+        "amb_stone",       // 2 Stone  – bubbles
+        "amb_wood",        // 3 Wood   – mouse squeaks
+        "amb_cute"         // 4 Cute   – bubbles (playful)
     )
 
     init {
