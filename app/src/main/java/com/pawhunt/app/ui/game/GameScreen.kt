@@ -78,7 +78,6 @@ fun GameScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             gameSurfaceView?.stopGame()
-            soundManager?.stopCatCall()
             soundManager?.stopPreyLoop()
             if (window != null) {
                 val insetsController = WindowCompat.getInsetsController(window, window.decorView)

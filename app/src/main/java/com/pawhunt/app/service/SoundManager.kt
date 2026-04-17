@@ -19,9 +19,6 @@ class SoundManager(private val context: Context) {
     private val uiCloseId: Int
 
     private var preyLoopStreamId = 0
-    private var catCallStreamId = 0
-    private var catCallPending = false
-    private var catCallSoundId = 0
 
     @Volatile
     var enabled = true
@@ -61,18 +58,10 @@ class SoundManager(private val context: Context) {
         uiOpenId = loadSoundSafe("sfx_ui_open")
         uiCloseId = loadSoundSafe("sfx_ui_close")
 
-        val allKeys = toySoundKeys.values.toSet() + "sfx_cat_call"
+        val allKeys = toySoundKeys.values.toSet()
         for (key in allKeys) {
             val id = loadSoundSafe(key)
             if (id != 0) soundMap[key] = id
-        }
-        catCallSoundId = soundMap["sfx_cat_call"] ?: 0
-
-        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0 && sampleId == catCallSoundId && catCallPending) {
-                catCallPending = false
-                catCallStreamId = soundPool.play(catCallSoundId, 0.7f, 0.7f, 1, -1, 1f)
-            }
         }
     }
 
@@ -92,36 +81,8 @@ class SoundManager(private val context: Context) {
 
     @Suppress("UNUSED_PARAMETER")
     fun update(dt: Float) {
-        // reserved for future per-frame audio logic
     }
 
-    fun startCatCall() {
-        stopCatCall()
-        if (!enabled) return
-        if (catCallSoundId == 0) {
-            catCallPending = true
-            return
-        }
-        val stream = soundPool.play(catCallSoundId, 0.7f, 0.7f, 1, -1, 1f)
-        if (stream == 0) {
-            catCallPending = true
-        } else {
-            catCallStreamId = stream
-            catCallPending = false
-        }
-    }
-
-    fun stopCatCall() {
-        catCallPending = false
-        if (catCallStreamId != 0) {
-            soundPool.stop(catCallStreamId)
-            catCallStreamId = 0
-        }
-    }
-
-    /**
-     * Start looping the prey's sound. Stops any previous loop atomically.
-     */
     fun startPreyLoop(toyName: String) {
         stopPreyLoop()
         if (!enabled) return
@@ -173,7 +134,6 @@ class SoundManager(private val context: Context) {
     }
 
     fun release() {
-        stopCatCall()
         stopPreyLoop()
         soundPool.release()
     }
