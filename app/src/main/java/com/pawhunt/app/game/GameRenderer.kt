@@ -64,7 +64,7 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
             preys.add(prey)
         }
         soundManager?.let {
-            if (attracting) it.startCatCall() else it.startPreyLoop(toy.behaviorType)
+            if (attracting) it.startCatCall() else it.startPreyLoop(toy.name)
         }
     }
 
@@ -169,7 +169,7 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
             attracting = false
             soundManager?.stopCatCall()
             val toy = allToys.getOrNull(currentToyIndex % allToys.size)
-            if (toy != null) soundManager?.startPreyLoop(toy.behaviorType)
+            if (toy != null) soundManager?.startPreyLoop(toy.name)
             return
         }
 
@@ -181,7 +181,7 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
                 synchronized(hitEffects) {
                     hitEffects.add(HitEffect(pos, hit.toy.primaryColor))
                 }
-                soundManager?.playHit(hit.toy.behaviorType)
+                soundManager?.playHit(hit.toy.name)
                 onHit?.invoke(pos)
                 mainHandler.postDelayed({ spawnNextPrey() }, 600L)
             }

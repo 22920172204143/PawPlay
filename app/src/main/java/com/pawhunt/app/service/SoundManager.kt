@@ -7,25 +7,36 @@ package com.pawhunt.app.service
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
-import com.pawhunt.app.model.BehaviorType
 
 class SoundManager(private val context: Context) {
 
     private val soundPool: SoundPool
-    private val hitSoundId: Int
     private val popSoundId: Int
 
-    private val hitSoundMap = mutableMapOf<String, Int>()
+    private val soundMap = mutableMapOf<String, Int>()
     private val uiOpenId: Int
     private val uiCloseId: Int
 
     private var hitCooldown = 0f
     private var preyLoopStreamId = 0
     private var catCallStreamId = 0
-    private val catCallId: Int
+    private var catCallPending = false
+    private var catCallSoundId = 0
 
     @Volatile
     var enabled = true
+
+    /** Per-toy sound key mapping (toy name → res/raw file name) */
+    private val toySoundKeys = mapOf(
+        "Ladybug"   to "sfx_hit_bug",
+        "Cockroach" to "sfx_hit_roach",
+        "Fish"      to "sfx_hit_fish",
+        "Mouse"     to "sfx_hit_mouse",
+        "Bird"      to "sfx_hit_bird",
+        "Spider"    to "sfx_hit_spider",
+        "Bee"       to "sfx_hit_bee"
+        // Butterfly, Feather, Yarn Ball → no sound yet
+    )
 
     init {
         val attrs = AudioAttributes.Builder()
@@ -38,17 +49,23 @@ class SoundManager(private val context: Context) {
             .setAudioAttributes(attrs)
             .build()
 
-        hitSoundId = loadSoundSafe("hit")
         popSoundId = loadSoundSafe("pop")
         uiOpenId = loadSoundSafe("sfx_ui_open")
         uiCloseId = loadSoundSafe("sfx_ui_close")
 
-        for (key in arrayOf("sfx_hit_bug", "sfx_hit_fish", "sfx_hit_bird", "sfx_hit_mouse", "sfx_hit_default")) {
+        val allKeys = toySoundKeys.values.toSet() + "sfx_cat_call"
+        for (key in allKeys) {
             val id = loadSoundSafe(key)
-            if (id != 0) hitSoundMap[key] = id
+            if (id != 0) soundMap[key] = id
         }
+        catCallSoundId = soundMap["sfx_cat_call"] ?: 0
 
-        catCallId = loadSoundSafe("sfx_cat_call")
+        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+            if (status == 0 && sampleId == catCallSoundId && catCallPending) {
+                catCallPending = false
+                catCallStreamId = soundPool.play(catCallSoundId, 0.7f, 0.7f, 1, -1, 1f)
+            }
+        }
     }
 
     private fun loadSoundSafe(name: String): Int {
@@ -60,35 +77,37 @@ class SoundManager(private val context: Context) {
         }
     }
 
-    private fun behaviorToKey(behaviorType: BehaviorType): String = when (behaviorType) {
-        BehaviorType.CRAWLING -> "sfx_hit_bug"
-        BehaviorType.RUNNING -> "sfx_hit_mouse"
-        BehaviorType.BOUNCING -> "sfx_hit_default"
-        BehaviorType.SWIMMING -> "sfx_hit_fish"
-        BehaviorType.FLYING -> "sfx_hit_bird"
-        BehaviorType.DANGLING, BehaviorType.DRIFTING -> "sfx_hit_default"
-        BehaviorType.RANDOM_CURVE -> "sfx_hit_default"
+    private fun toyToSoundId(toyName: String): Int {
+        val key = toySoundKeys[toyName] ?: return 0
+        return soundMap[key] ?: 0
     }
 
     fun update(dt: Float) {
-        if (hitCooldown > 0f) {
-            hitCooldown -= dt
-        }
+        if (hitCooldown > 0f) hitCooldown -= dt
     }
 
     /**
      * Start looping the cat-call sound to attract the cat.
+     * Handles SoundPool async load: if not yet ready, auto-plays when loaded.
      */
     fun startCatCall() {
         stopCatCall()
-        if (!enabled || catCallId == 0) return
-        catCallStreamId = soundPool.play(catCallId, 0.7f, 0.7f, 1, -1, 1f)
+        if (!enabled) return
+        if (catCallSoundId == 0) {
+            catCallPending = true
+            return
+        }
+        val stream = soundPool.play(catCallSoundId, 0.7f, 0.7f, 1, -1, 1f)
+        if (stream == 0) {
+            catCallPending = true
+        } else {
+            catCallStreamId = stream
+            catCallPending = false
+        }
     }
 
-    /**
-     * Stop the cat-call loop.
-     */
     fun stopCatCall() {
+        catCallPending = false
         if (catCallStreamId != 0) {
             soundPool.stop(catCallStreamId)
             catCallStreamId = 0
@@ -96,18 +115,16 @@ class SoundManager(private val context: Context) {
     }
 
     /**
-     * Start looping the prey's sound when it appears on screen.
+     * Start looping the prey's sound. Stops any previous loop atomically.
      */
-    fun startPreyLoop(behaviorType: BehaviorType) {
+    fun startPreyLoop(toyName: String) {
         stopPreyLoop()
         if (!enabled) return
-        val id = hitSoundMap[behaviorToKey(behaviorType)] ?: return
+        val id = toyToSoundId(toyName)
+        if (id == 0) return
         preyLoopStreamId = soundPool.play(id, 0.4f, 0.4f, 1, -1, 1f)
     }
 
-    /**
-     * Stop the currently looping prey sound.
-     */
     fun stopPreyLoop() {
         if (preyLoopStreamId != 0) {
             soundPool.stop(preyLoopStreamId)
@@ -116,26 +133,18 @@ class SoundManager(private val context: Context) {
     }
 
     /**
-     * Play hit sound when prey is caught: stop loop, then play one-shot.
+     * Play one-shot hit sound when prey is caught.
+     * Does NOT stop the prey loop — let startPreyLoop handle the transition.
      */
-    fun playHit(behaviorType: BehaviorType) {
-        stopPreyLoop()
+    fun playHit(toyName: String) {
         if (!enabled || hitCooldown > 0f) return
         hitCooldown = 0.1f
 
-        val id = hitSoundMap[behaviorToKey(behaviorType)] ?: hitSoundMap["sfx_hit_default"] ?: hitSoundId
+        val id = toyToSoundId(toyName)
         if (id != 0) {
             soundPool.play(id, 0.85f, 0.85f, 1, 0, 1f)
-        }
-    }
-
-    fun playHit() {
-        stopPreyLoop()
-        if (!enabled) return
-        if (hitSoundId != 0) {
-            soundPool.play(hitSoundId, 0.8f, 0.8f, 1, 0, 1f)
         } else if (popSoundId != 0) {
-            soundPool.play(popSoundId, 0.8f, 0.8f, 1, 0, 1f)
+            soundPool.play(popSoundId, 0.6f, 0.6f, 1, 0, 1f)
         }
     }
 
