@@ -31,6 +31,7 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
 
     private var catchCount = 0
     private var currentBgIndex = 0
+    private var attracting = true
 
     private val activeTouches = mutableMapOf<Int, TouchInfo>()
     @Volatile private var lastDt = 0.016f
@@ -62,8 +63,8 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
             prey.buildNewPath()
             preys.add(prey)
         }
-        if (catchCount == 0) {
-            soundManager?.playAmbient(currentBgIndex)
+        soundManager?.let {
+            if (attracting) it.startCatCall() else it.startPreyLoop(toy.behaviorType)
         }
     }
 
@@ -73,7 +74,6 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
         if (catchCount % 5 == 0) {
             currentBgIndex = (currentBgIndex + 1) % BackgroundRenderer.BG_COUNT
             trailSystem.clear()
-            soundManager?.playAmbient(currentBgIndex)
         }
         setupSinglePrey()
     }
@@ -163,6 +163,14 @@ class GameRenderer(private val surfaceHolder: SurfaceHolder) {
     fun onTouchDown(pointerId: Int, x: Float, y: Float) {
         synchronized(activeTouches) {
             activeTouches[pointerId] = TouchInfo(x, y)
+        }
+
+        if (attracting) {
+            attracting = false
+            soundManager?.stopCatCall()
+            val toy = allToys.getOrNull(currentToyIndex % allToys.size)
+            if (toy != null) soundManager?.startPreyLoop(toy.behaviorType)
+            return
         }
 
         synchronized(preys) {

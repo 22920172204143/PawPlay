@@ -1,12 +1,11 @@
 /**
  * @file SoundManager.kt
- * @brief Game audio manager: SoundPool for short SFX, MediaPlayer for ambient loops.
+ * @brief Game audio manager: SoundPool for short SFX and prey-type looping sounds.
  */
 package com.pawhunt.app.service
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.MediaPlayer
 import android.media.SoundPool
 import com.pawhunt.app.model.BehaviorType
 
@@ -20,21 +19,13 @@ class SoundManager(private val context: Context) {
     private val uiOpenId: Int
     private val uiCloseId: Int
 
-    private var ambientPlayer: MediaPlayer? = null
-    private var currentAmbientRes = 0
-
     private var hitCooldown = 0f
+    private var preyLoopStreamId = 0
+    private var catCallStreamId = 0
+    private val catCallId: Int
 
     @Volatile
     var enabled = true
-
-    private val ambientResNames = arrayOf(
-        "amb_mulch",       // 0 Mulch  – cricket / garden
-        "amb_forest",      // 1 Grass  – bird chirps
-        "amb_stone",       // 2 Stone  – bubbles
-        "amb_wood",        // 3 Wood   – mouse squeaks
-        "amb_cute"         // 4 Cute   – bubbles (playful)
-    )
 
     init {
         val attrs = AudioAttributes.Builder()
@@ -56,6 +47,8 @@ class SoundManager(private val context: Context) {
             val id = loadSoundSafe(key)
             if (id != 0) hitSoundMap[key] = id
         }
+
+        catCallId = loadSoundSafe("sfx_cat_call")
     }
 
     private fun loadSoundSafe(name: String): Int {
@@ -67,11 +60,16 @@ class SoundManager(private val context: Context) {
         }
     }
 
-    /**
-     * @brief Advance internal cooldown timer
-     * @param[in] dt delta seconds
-     * @return none
-     */
+    private fun behaviorToKey(behaviorType: BehaviorType): String = when (behaviorType) {
+        BehaviorType.CRAWLING -> "sfx_hit_bug"
+        BehaviorType.RUNNING -> "sfx_hit_mouse"
+        BehaviorType.BOUNCING -> "sfx_hit_default"
+        BehaviorType.SWIMMING -> "sfx_hit_fish"
+        BehaviorType.FLYING -> "sfx_hit_bird"
+        BehaviorType.DANGLING, BehaviorType.DRIFTING -> "sfx_hit_default"
+        BehaviorType.RANDOM_CURVE -> "sfx_hit_default"
+    }
+
     fun update(dt: Float) {
         if (hitCooldown > 0f) {
             hitCooldown -= dt
@@ -79,35 +77,60 @@ class SoundManager(private val context: Context) {
     }
 
     /**
-     * @brief Play hit sound based on prey behavior type, with 0.1s cooldown
-     * @param[in] behaviorType the prey's behavior type
-     * @return none
+     * Start looping the cat-call sound to attract the cat.
+     */
+    fun startCatCall() {
+        stopCatCall()
+        if (!enabled || catCallId == 0) return
+        catCallStreamId = soundPool.play(catCallId, 0.7f, 0.7f, 1, -1, 1f)
+    }
+
+    /**
+     * Stop the cat-call loop.
+     */
+    fun stopCatCall() {
+        if (catCallStreamId != 0) {
+            soundPool.stop(catCallStreamId)
+            catCallStreamId = 0
+        }
+    }
+
+    /**
+     * Start looping the prey's sound when it appears on screen.
+     */
+    fun startPreyLoop(behaviorType: BehaviorType) {
+        stopPreyLoop()
+        if (!enabled) return
+        val id = hitSoundMap[behaviorToKey(behaviorType)] ?: return
+        preyLoopStreamId = soundPool.play(id, 0.4f, 0.4f, 1, -1, 1f)
+    }
+
+    /**
+     * Stop the currently looping prey sound.
+     */
+    fun stopPreyLoop() {
+        if (preyLoopStreamId != 0) {
+            soundPool.stop(preyLoopStreamId)
+            preyLoopStreamId = 0
+        }
+    }
+
+    /**
+     * Play hit sound when prey is caught: stop loop, then play one-shot.
      */
     fun playHit(behaviorType: BehaviorType) {
+        stopPreyLoop()
         if (!enabled || hitCooldown > 0f) return
         hitCooldown = 0.1f
 
-        val key = when (behaviorType) {
-            BehaviorType.CRAWLING -> "sfx_hit_bug"
-            BehaviorType.RUNNING -> "sfx_hit_mouse"
-            BehaviorType.BOUNCING -> "sfx_hit_default"
-            BehaviorType.SWIMMING -> "sfx_hit_fish"
-            BehaviorType.FLYING -> "sfx_hit_bird"
-            BehaviorType.DANGLING, BehaviorType.DRIFTING -> "sfx_hit_default"
-            BehaviorType.RANDOM_CURVE -> "sfx_hit_default"
-        }
-
-        val id = hitSoundMap[key] ?: hitSoundMap["sfx_hit_default"] ?: hitSoundId
+        val id = hitSoundMap[behaviorToKey(behaviorType)] ?: hitSoundMap["sfx_hit_default"] ?: hitSoundId
         if (id != 0) {
             soundPool.play(id, 0.85f, 0.85f, 1, 0, 1f)
         }
     }
 
-    /**
-     * @brief Play generic hit sound (legacy, no cooldown)
-     * @return none
-     */
     fun playHit() {
+        stopPreyLoop()
         if (!enabled) return
         if (hitSoundId != 0) {
             soundPool.play(hitSoundId, 0.8f, 0.8f, 1, 0, 1f)
@@ -116,77 +139,24 @@ class SoundManager(private val context: Context) {
         }
     }
 
-    /**
-     * @brief Play pop sound effect
-     * @return none
-     */
     fun playPop() {
         if (!enabled || popSoundId == 0) return
         soundPool.play(popSoundId, 0.6f, 0.6f, 1, 0, 1.2f)
     }
 
-    /**
-     * @brief Play UI panel open sound
-     * @return none
-     */
     fun playUIOpen() {
         if (!enabled || uiOpenId == 0) return
         soundPool.play(uiOpenId, 0.5f, 0.5f, 1, 0, 1f)
     }
 
-    /**
-     * @brief Play UI panel close sound
-     * @return none
-     */
     fun playUIClose() {
         if (!enabled || uiCloseId == 0) return
         soundPool.play(uiCloseId, 0.5f, 0.5f, 1, 0, 1f)
     }
 
-    /**
-     * @brief Switch ambient background sound based on background index
-     * @param[in] bgIndex background index (0..4)
-     * @return none
-     */
-    fun playAmbient(bgIndex: Int) {
-        if (!enabled) return
-        val resName = ambientResNames.getOrNull(bgIndex) ?: return
-        val resId = context.resources.getIdentifier(resName, "raw", context.packageName)
-        if (resId == 0 || resId == currentAmbientRes) return
-
-        stopAmbient()
-        currentAmbientRes = resId
-
-        try {
-            ambientPlayer = MediaPlayer.create(context, resId)?.apply {
-                isLooping = true
-                setVolume(0.3f, 0.3f)
-                start()
-            }
-        } catch (_: Exception) {
-            ambientPlayer = null
-        }
-    }
-
-    /**
-     * @brief Stop ambient background sound
-     * @return none
-     */
-    fun stopAmbient() {
-        try {
-            ambientPlayer?.stop()
-            ambientPlayer?.release()
-        } catch (_: Exception) { }
-        ambientPlayer = null
-        currentAmbientRes = 0
-    }
-
-    /**
-     * @brief Release all audio resources
-     * @return none
-     */
     fun release() {
+        stopCatCall()
+        stopPreyLoop()
         soundPool.release()
-        stopAmbient()
     }
 }
