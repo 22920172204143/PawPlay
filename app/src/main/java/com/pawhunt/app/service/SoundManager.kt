@@ -35,7 +35,7 @@ class SoundManager(private val context: Context) {
         "Bird"      to "sfx_hit_bird",
         "Spider"    to "sfx_hit_spider",
         "Bee"       to "sfx_hit_bee"
-        // Butterfly, Feather, Yarn Ball → no sound yet
+        // Butterfly → no sound yet
     )
 
     init {

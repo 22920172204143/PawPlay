@@ -34,9 +34,7 @@ object ToyLibrary {
         Toy(5, "Mouse", true, BehaviorType.RUNNING, 5f, 360f, Color(0xFF78909C), "🐭"),
         Toy(6, "Spider", true, BehaviorType.DANGLING, 4f, 360f, Color(0xFF212121), "🕷️"),
         Toy(7, "Bee", true, BehaviorType.FLYING, 5.5f, 340f, Color(0xFFFFD600), "🐝"),
-        Toy(8, "Feather", true, BehaviorType.DRIFTING, 2.5f, 360f, Color(0xFFE0E0E0), "🪶"),
-        Toy(9, "Bird", true, BehaviorType.FLYING, 6f, 360f, Color(0xFF00BFA5), "🐦"),
-        Toy(10, "Yarn Ball", true, BehaviorType.BOUNCING, 4.5f, 340f, Color(0xFFFF6D00), "🧶")
+        Toy(9, "Bird", true, BehaviorType.FLYING, 6f, 360f, Color(0xFF00BFA5), "🐦")
     )
 
     val freeToys get() = allToys.filter { it.isFree }
