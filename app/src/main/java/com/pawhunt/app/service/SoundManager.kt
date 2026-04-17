@@ -88,10 +88,13 @@ class SoundManager(private val context: Context) {
         hitCooldown = 0.1f
 
         val key = when (behaviorType) {
-            BehaviorType.CRAWLING, BehaviorType.RUNNING, BehaviorType.BOUNCING -> "sfx_hit_bug"
+            BehaviorType.CRAWLING -> "sfx_hit_bug"
+            BehaviorType.RUNNING -> "sfx_hit_mouse"
+            BehaviorType.BOUNCING -> "sfx_hit_default"
             BehaviorType.SWIMMING -> "sfx_hit_fish"
             BehaviorType.FLYING -> "sfx_hit_bird"
-            else -> "sfx_hit_default"
+            BehaviorType.DANGLING, BehaviorType.DRIFTING -> "sfx_hit_default"
+            BehaviorType.RANDOM_CURVE -> "sfx_hit_default"
         }
 
         val id = hitSoundMap[key] ?: hitSoundMap["sfx_hit_default"] ?: hitSoundId
