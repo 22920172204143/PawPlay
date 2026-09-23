@@ -1,6 +1,6 @@
 {
   "id": "reference_ladybug",
-  "revision": 3,
+  "revision": 8,
   "body_radius": 0.47,
   "shell_radius": 0.49,
   "shell_height": 0.105,
@@ -200,7 +200,7 @@
     "modes": [
       {
         "id": "gentle",
-        "label": "\u7f13\u6162\u5f00\u5408",
+        "label": "缓慢开合",
         "duration": [
           2.4,
           3.7
@@ -223,7 +223,7 @@
       },
       {
         "id": "flutter",
-        "label": "\u77ed\u4fc3\u8fde\u62cd",
+        "label": "短促连拍",
         "duration": [
           1.2,
           2.2
@@ -246,7 +246,7 @@
       },
       {
         "id": "spread",
-        "label": "\u5c55\u7fc5\u505c\u7559",
+        "label": "展翅停留",
         "duration": [
           1.5,
           2.8
@@ -269,7 +269,7 @@
       },
       {
         "id": "settle",
-        "label": "\u8f7b\u6536\u505c\u987f",
+        "label": "轻收停顿",
         "duration": [
           0.7,
           1.35
@@ -291,5 +291,103 @@
         "asymmetry": 0.025
       }
     ]
+  },
+  "antenna_radii_left": [
+    1.55,
+    1.18,
+    0.78,
+    0.91,
+    0.8,
+    0.64,
+    0.51,
+    0.37,
+    0.24
+  ],
+  "antenna_radii_right": [
+    1.45,
+    1.05,
+    0.7,
+    0.86,
+    0.73,
+    0.55,
+    0.39,
+    0.23
+  ],
+  "locomotion": {
+    "version": 4,
+    "seed": 230924,
+    "arena_radius": 3.65,
+    "max_speed": 2.75,
+    "acceleration": 2.3,
+    "braking": 3.1,
+    "response_seconds": 0.14,
+    "transition_seconds": 0.42,
+    "max_open_degrees": 55,
+    "states": [
+      {
+        "id": "cruise",
+        "label": "缓行",
+        "speed": [
+          0.18,
+          0.42
+        ],
+        "duration": [
+          2.0,
+          3.7
+        ]
+      },
+      {
+        "id": "dash",
+        "label": "疾行",
+        "speed": [
+          2.1,
+          2.7
+        ],
+        "duration": [
+          1.4,
+          2.5
+        ]
+      },
+      {
+        "id": "pause",
+        "label": "停留",
+        "speed": [
+          0,
+          0.045
+        ],
+        "duration": [
+          0.8,
+          1.5
+        ]
+      }
+    ],
+    "wing_frequency": [
+      0.55,
+      10.0
+    ],
+    "wing_excursion_degrees": [24, 44],
+    "body_elastic": {
+      "pulse": [0.003, 0.024],
+      "acceleration_stretch": 0.025,
+      "stiffness": 90,
+      "damping": 11
+    },
+    "body_sway_degrees": [
+      0.45,
+      6.8
+    ],
+    "antenna_sway_degrees": [
+      0.7,
+      8.5
+    ],
+    "antenna_spring": {
+      "stiffness": [48, 40, 24],
+      "damping": [5.6, 4.2, 2.8]
+    },
+    "antenna_root": {
+      "frequency": [0.6, 1.25],
+      "sway_degrees": [6.0, 24.0],
+      "bend_weights": [0.30, 0.30, 0.23, 0.17]
+    }
   }
 }

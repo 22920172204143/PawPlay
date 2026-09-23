@@ -16,3 +16,22 @@ python tools/preview/serve.py
 Android：配置 JDK 17 与 Android SDK 34 后运行 `gradlew.bat :app:assembleDebug :app:lintDebug`。debug 是独立安装的瓢虫预览，release 保留原游戏入口。
 
 动作参数与调节方式见 [翅壳动作分析](../../docs/wing-motion-analysis.md)。浏览器动作用 `node --test tools/preview/wing-motion.test.mjs` 检查。点击播放后默认自然变化，也可单独选择模式。
+
+revision 4 可用“场景运动”看快慢路线、“跟随近看”看姿态联动。下拉框为自然巡游/慢速/快速/停留。检查控制器：
+
+```powershell
+node --test tools/preview/bug-motion.test.mjs tools/preview/wing-motion.test.mjs
+python tools/preview/check-motion-contract.py --java-home <JDK17路径> --stdlib <Gradle缓存中的kotlin-stdlib-1.9.22.jar>
+```
+
+跨运行时检查需先 assembleDebug，直接运行编译后的 Android 运动类，验证与浏览器在同一输入下的位置、速度、姿态和触角一致；它不代替手机渲染验收。
+
+revision 5 加强触角中段/末梢的柔软度和回弹。选择“加速后停下”循环查看减速余摆；“查看调整前触角”沿用同一运动时刻，可暂停后比较。调整前控制器及配置保存在本地 `.local/reviews/p1/before-softness-r4/bug-motion.mjs` 和 `profile.json`，缺少它们会隐藏比较按钮，不影响当前模型。
+
+当前 revision 6 可用“快速观察”对照大幅高速拍翅；“身体弹性”开关只改变形变显示，不重置运动。Android 预览也有此开关。当前对比基线更新为 `.local/reviews/p1/before-flight-r5/`；基线未获用户认可，按钮只表示调整前后。
+
+左侧“原片片段”支持源帧率动态对照，本地短片在 `.local/reviews/p1/reference-r6/`，其 manifest 记录起始时刻、帧率、固定裁剪尺寸。分析帧与短片不入库，干净环境无这些证据仍可查看当前模型。
+
+revision 7 将触角根部改为四段渐进弯曲。点击“触角近看”固定头部朝向并放大根部；需要将该版 GLB 与新 profile 一起使用，Node 检查会校验导出的四段根部层级。
+
+当前 revision 8 加大根部摆幅，并提高贴近头部部分的弯曲比例。“查看调整前动作”使用 `.local/reviews/p1/before-amplitude-r7/` 中的控制器和配置，对照双方各自的弯曲分配；可暂停后比较同一时刻，或选择“加速后停下”观察回弹。当前及对比版本均未获用户验收。

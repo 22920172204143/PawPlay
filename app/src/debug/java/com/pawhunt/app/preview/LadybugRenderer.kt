@@ -64,11 +64,12 @@ class LadybugRenderer(
     private var renderedFrames = 0
     private var joints = emptyList<Joint>()
     private var restOpening = 13f
-    private lateinit var motion: WingMotion
+    private lateinit var motion: BugMotion
     private val matrix = FloatArray(16)
 
     var mode = Mode.FRONT
-    var animated = false
+    var animated = true
+    var bodyElastic = true
     var opening = 13f
         set(value) {
             field = value
@@ -77,7 +78,10 @@ class LadybugRenderer(
 
     fun selectMotion(id: String) { motion.select(id); animated = true }
 
-    private data class Joint(val name: String, val instance: Int, val base: FloatArray)
+    private val antennaNames = listOf("antenna_left_pivot", "antenna_left_mid_pivot", "antenna_left_tip_pivot",
+        "antenna_right_pivot", "antenna_right_mid_pivot", "antenna_right_tip_pivot")
+    private data class Joint(val name: String, val instance: Int, val base: FloatArray,
+                             val antennaIndex: Int, val bendWeight: Float)
 
     init {
         try {
@@ -86,21 +90,30 @@ class LadybugRenderer(
             }
             restOpening = profile.getDouble("shell_open_degrees").toFloat()
             opening = restOpening
-            val motionProfile = profile.getJSONObject("motion")
+            val motionProfile = profile.getJSONObject("locomotion")
             fun pair(json: JSONObject, key: String): Pair<Double, Double> {
                 val values = json.getJSONArray(key)
                 return values.getDouble(0) to values.getDouble(1)
             }
-            val modes = motionProfile.getJSONArray("modes")
-            motion = WingMotion(WingMotion.Config(
-                motionProfile.getLong("seed"), motionProfile.getDouble("transition_seconds"),
-                motionProfile.getDouble("max_open_degrees"),
-                List(modes.length()) { i ->
-                    val m = modes.getJSONObject(i)
-                    WingMotion.Mode(m.getString("id"), m.getString("label"), pair(m, "duration"),
-                        pair(m, "frequency"), pair(m, "center"), pair(m, "amplitude"),
-                        m.getDouble("open_fraction"), m.getDouble("crest_hold"), m.getDouble("asymmetry"))
-                }), restOpening.toDouble())
+            val states = motionProfile.getJSONArray("states")
+            val spring = motionProfile.getJSONObject("antenna_spring")
+            val elastic = motionProfile.getJSONObject("body_elastic")
+            val antennaRoot = motionProfile.getJSONObject("antenna_root")
+            fun springValues(key: String) = DoubleArray(3) { spring.getJSONArray(key).getDouble(it) }
+            motion = BugMotion(BugMotion.Config(
+                motionProfile.getLong("seed"), motionProfile.getDouble("arena_radius"),
+                motionProfile.getDouble("max_speed"), motionProfile.getDouble("acceleration"),
+                motionProfile.getDouble("braking"), motionProfile.getDouble("response_seconds"),
+                motionProfile.getDouble("transition_seconds"), motionProfile.getDouble("max_open_degrees"),
+                List(states.length()) { i ->
+                    val state = states.getJSONObject(i)
+                    BugMotion.State(state.getString("id"), state.getString("label"), pair(state,"speed"), pair(state,"duration"))
+                }, pair(motionProfile,"wing_frequency"), pair(motionProfile,"body_sway_degrees"),
+                pair(motionProfile,"antenna_sway_degrees"), springValues("stiffness"), springValues("damping"),
+                pair(motionProfile,"wing_excursion_degrees"),
+                BugMotion.Elastic(pair(elastic,"pulse"), elastic.getDouble("acceleration_stretch"),
+                    elastic.getDouble("stiffness"), elastic.getDouble("damping")),
+                pair(antennaRoot,"frequency"), pair(antennaRoot,"sway_degrees")), restOpening.toDouble())
             camera.setExposure(1f)
             view.scene = scene
             view.camera = camera
@@ -112,14 +125,23 @@ class LadybugRenderer(
             }
             loadAsset("models/reference_stage.glb")
             val bug = loadAsset("models/reference_ladybug.glb")
-            val names = listOf("shell_left_hinge", "shell_right_hinge", "antenna_left_pivot", "antenna_right_pivot")
+            val weights = antennaRoot.getJSONArray("bend_weights")
+            val bindings = linkedMapOf<String, Pair<Int, Float>>()
+            antennaNames.forEachIndexed { i, name ->
+                bindings[name] = i to (if(i % 3 == 0) weights.getDouble(0).toFloat() else 1f)
+            }
+            listOf("left", "right").forEachIndexed { side, name ->
+                for (part in 1..3) bindings["antenna_${name}_root_flex_$part"] = side*3 to weights.getDouble(part).toFloat()
+            }
+            val names = listOf("ladybug_root", "shell_left_hinge", "shell_right_hinge") + bindings.keys
             joints = names.map { name ->
                 val entity = bug.entities.firstOrNull { bug.getName(it) == name }
                     ?: error("Missing model node: $name")
                 val instance = engine.transformManager.getInstance(entity)
                 val base = FloatArray(16)
                 engine.transformManager.getTransform(instance, base)
-                Joint(name, instance, base)
+                val binding = bindings[name]
+                Joint(name, instance, base, binding?.first ?: -1, binding?.second ?: 1f)
             }
             uiHelper.renderCallback = object : UiHelper.RendererCallback {
                 override fun onNativeWindowChanged(surface: Surface) {
@@ -143,7 +165,7 @@ class LadybugRenderer(
             }
             uiHelper.attachTo(surface)
             Log.i(TAG, "model_loaded revision=${profile.getInt("revision")} parts=${bug.entities.size}")
-            onStatus("模型已加载 · 头部与动作细化")
+            onStatus("模型已加载 · 速度与姿态联动")
         } catch (failure: Throwable) {
             close()
             throw failure
@@ -185,17 +207,25 @@ class LadybugRenderer(
         if (animated) {
             elapsed += delta
             val pose = motion.advance(delta)
-            opening = ((pose.left + pose.right) / 2).toFloat()
+            opening = ((pose.wingLeft + pose.wingRight) / 2).toFloat()
         }
+        val pose = motion.pose
         for (joint in joints) {
-            val degrees = when (joint.name) {
-                "shell_left_hinge" -> -(motion.pose.left.toFloat() - restOpening)
-                "shell_right_hinge" -> motion.pose.right.toFloat() - restOpening
-                "antenna_left_pivot" -> motion.pose.antennaLeft.toFloat()
-                else -> motion.pose.antennaRight.toFloat()
-            }
             joint.base.copyInto(matrix)
-            Matrix.rotateM(matrix, 0, degrees, 0f, 1f, 0f)
+            if (joint.name == "ladybug_root") {
+                Matrix.translateM(matrix, 0, pose.x.toFloat(), pose.height.toFloat(), pose.z.toFloat())
+                Matrix.rotateM(matrix, 0, Math.toDegrees(pose.yaw).toFloat(), 0f, 1f, 0f)
+                Matrix.rotateM(matrix, 0, Math.toDegrees(pose.pitch).toFloat(), 1f, 0f, 0f)
+                Matrix.rotateM(matrix, 0, Math.toDegrees(pose.roll).toFloat(), 0f, 0f, 1f)
+                if (bodyElastic) Matrix.scaleM(matrix, 0, pose.scaleX.toFloat(), pose.scaleY.toFloat(), pose.scaleZ.toFloat())
+            } else {
+                val degrees = when (joint.name) {
+                    "shell_left_hinge" -> -(pose.wingLeft.toFloat() - restOpening)
+                    "shell_right_hinge" -> pose.wingRight.toFloat() - restOpening
+                    else -> pose.antennae[joint.antennaIndex].toFloat() * joint.bendWeight
+                }
+                Matrix.rotateM(matrix, 0, degrees, 0f, 1f, 0f)
+            }
             engine.transformManager.setTransform(joint.instance, matrix)
         }
         updateCamera()
@@ -209,7 +239,8 @@ class LadybugRenderer(
         val statsSeconds = (frameTimeNanos - statsStart) / 1e9
         if (statsSeconds >= 1.0) {
             val fps = (renderedFrames / statsSeconds).toInt()
-            onStatus("${if (animated) motion.pose.label else "动作已暂停"} · $fps 帧/秒 · 尚待视觉验收")
+            val speedLabel = String.format(java.util.Locale.ROOT, "%.1f", motion.pose.speed / 1.1)
+            onStatus("${if (animated) motion.pose.label else "动作已暂停"} · $speedLabel 体长/秒 · $fps 帧/秒")
             statsStart = frameTimeNanos
             renderedFrames = 0
         }
@@ -220,11 +251,13 @@ class LadybugRenderer(
         val halfW = extent * max(1.0, aspect)
         val halfH = extent * max(1.0, 1.0 / aspect)
         camera.setProjection(Camera.Projection.ORTHO, -halfW, halfW, -halfH, halfH, .01, 100.0)
+        val x = if (mode == Mode.REFERENCE_SIZE) 0.0 else motion.pose.x
+        val z = if (mode == Mode.REFERENCE_SIZE) 0.0 else motion.pose.z
         if (mode == Mode.VOLUME) {
             val angle = elapsed * .55
-            camera.lookAt(sin(angle) * 3, 3.2, cos(angle) * 3, 0.0, .08, 0.0, 0.0, 1.0, 0.0)
+            camera.lookAt(x + sin(angle) * 3, 3.2, z + cos(angle) * 3, x, .08, z, 0.0, 1.0, 0.0)
         } else {
-            camera.lookAt(0.0, 5.0, .00001, 0.0, .08, 0.0, 0.0, 0.0, -1.0)
+            camera.lookAt(x, 5.0, z + .00001, x, .08, z, 0.0, 0.0, -1.0)
         }
     }
 

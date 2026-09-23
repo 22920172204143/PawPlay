@@ -13,6 +13,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
@@ -58,28 +59,36 @@ class LadybugPreviewActivity : Activity() {
             setOnClickListener { action() }
             controls.addView(this, LinearLayout.LayoutParams(0, dp(48), 1f))
         }
-        button("俯视") { renderer?.mode = LadybugRenderer.Mode.FRONT }
+        button("跟随近看") { renderer?.mode = LadybugRenderer.Mode.FRONT }
         button("旋转观察") {
             renderer?.let { it.mode = LadybugRenderer.Mode.VOLUME; it.animated = true }
             play.text = "暂停"
         }
-        button("参考尺寸") { renderer?.mode = LadybugRenderer.Mode.REFERENCE_SIZE }
-        play = button("播放") {
+        button("场景运动") { renderer?.mode = LadybugRenderer.Mode.REFERENCE_SIZE }
+        play = button("暂停") {
             renderer?.let { it.animated = !it.animated; play.text = if (it.animated) "暂停" else "播放" }
         }
         layout.addView(controls)
         layout.addView(Spinner(ContextThemeWrapper(this, android.R.style.Theme_Material)).apply {
             adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item,
-                listOf("自然变化", "缓慢开合", "短促连拍", "展翅停留", "轻收停顿"))
+                listOf("自然巡游", "慢速观察", "快速观察", "短暂停留"))
             var initialSelection = true
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                     if (initialSelection) { initialSelection = false; return }
-                    renderer?.selectMotion(listOf("auto", "gentle", "flutter", "spread", "settle")[position])
+                    renderer?.selectMotion(listOf("auto", "cruise", "dash", "pause")[position])
                     play.text = "暂停"
                 }
                 override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             }
+        }, LinearLayout.LayoutParams(-1, dp(40)))
+        layout.addView(CheckBox(ContextThemeWrapper(this, android.R.style.Theme_Material)).apply {
+            text = "身体弹性"
+            textSize = 12f
+            setTextColor(Color.rgb(190, 204, 188))
+            isChecked = true
+            setPadding(dp(16), 0, 0, 0)
+            setOnCheckedChangeListener { _, enabled -> renderer?.bodyElastic = enabled }
         }, LinearLayout.LayoutParams(-1, dp(40)))
         val openingLabel = TextView(this).apply {
             text = "翅壳开合"
@@ -103,7 +112,7 @@ class LadybugPreviewActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(42)))
         layout.addView(TextView(this).apply {
-            text = "头部与动作细化：可观察自然节奏，也可单独选择拍动方式。"
+            text = "快速观察看大幅拍翅；开关身体弹性，对比轻微挤压和舒展。"
             textSize = 11f
             setTextColor(Color.rgb(137, 153, 140))
             setPadding(dp(20), dp(4), dp(20), dp(16))

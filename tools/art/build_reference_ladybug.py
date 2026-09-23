@@ -196,8 +196,8 @@ def shell(name, side, mat, root):
     return pivot
 
 
-def ellipsoid(name, location, scale, mat, parent, planar=False, uv_extent=(1,1)):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=48,ring_count=24,location=location)
+def ellipsoid(name, location, scale, mat, parent, planar=False, uv_extent=(1,1), segments=48, rings=24):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segments,ring_count=rings,location=location)
     obj=bpy.context.object;obj.name=name;obj.scale=scale
     bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
     obj.parent=parent;obj.data.materials.append(mat)
@@ -211,19 +211,57 @@ def ellipsoid(name, location, scale, mat, parent, planar=False, uv_extent=(1,1))
 
 def antenna(name,side,mat,root):
     coords=PROFILE['antenna_left_points' if side<0 else 'antenna_right_points']
-    anchor_x,anchor_y=coords[0]
-    pivot=empty(name+'_pivot',root,(side*anchor_x,anchor_y,.172))
-    curve=bpy.data.curves.new(name,'CURVE');curve.dimensions='3D'
-    curve.resolution_u=12;curve.bevel_depth=PROFILE['antenna_radius'];curve.bevel_resolution=3
-    spline=curve.splines.new('BEZIER');spline.bezier_points.add(len(coords)-1)
-    for i,(point,(x,y)) in enumerate(zip(spline.bezier_points,coords)):
-        point.co=(side*(x-anchor_x),y-anchor_y,.013*math.sin((y-anchor_y)*7))
-        point.radius=1-.22*i/(len(coords)-1)
+    radii=PROFILE['antenna_radii_left' if side<0 else 'antenna_radii_right']
+    # Compute the complete smooth rest curve first; split with identical boundary handles.
+    guide=bpy.data.curves.new(name+'_guide','CURVE');guide.dimensions='3D'
+    spline=guide.splines.new('BEZIER');spline.bezier_points.add(len(coords)-1)
+    for point,(x,y),radius in zip(spline.bezier_points,coords,radii):
+        point.co=(side*x,y,.172+.013*math.sin((y-coords[0][1])*7))
+        point.radius=radius
         point.handle_left_type=point.handle_right_type='AUTO'
-    obj=bpy.data.objects.new(name,curve);bpy.context.collection.objects.link(obj);obj.parent=pivot
-    obj.data.materials.append(mat)
-    bpy.context.view_layer.objects.active=obj;obj.select_set(True);bpy.ops.object.convert(target='MESH');obj.select_set(False)
-    return pivot
+    helper=bpy.data.objects.new(name+'_guide',guide);bpy.context.collection.objects.link(helper)
+    bpy.context.view_layer.update()
+    samples=[(p.co.copy(),p.handle_left.copy(),p.handle_right.copy(),p.radius) for p in spline.bezier_points]
+    # Exact de Casteljau subdivision of the two basal spans. The rest silhouette
+    # is unchanged, but four short sections can share a gradual bend at runtime.
+    stem=[samples[0]]
+    for start,end in zip(samples[:2],samples[1:3]):
+        a,b,c,d=start[0],start[2],end[1],end[0]
+        ab,bc,cd=(a+b)/2,(b+c)/2,(c+d)/2
+        abc,bcd=(ab+bc)/2,(bc+cd)/2
+        stem[-1]=(stem[-1][0],stem[-1][1],ab,stem[-1][3])
+        stem.extend([((abc+bcd)/2,abc,bcd,(start[3]+end[3])/2),
+                     (d,cd,end[2],end[3])])
+    base=empty(name+'_pivot',root,stem[0][0])
+    parent=base;parts=[];caps=[]
+    for index in range(4):
+        if index:
+            parent=empty(name+'_root_flex_'+str(index),parent,stem[index][0]-stem[index-1][0])
+            caps.append(('root_'+str(index),stem[index][3],parent))
+        parts.append(('root_'+str(index),stem[index:index+2],parent,6))
+    mid=empty(name+'_mid_pivot',parent,samples[2][0]-stem[3][0])
+    tip=empty(name+'_tip_pivot',mid,samples[4][0]-samples[2][0])
+    parts.extend([('mid',samples[2:5],mid,12),('tip',samples[4:],tip,12)])
+    for label,points,parent,resolution in parts:
+        curve=bpy.data.curves.new(name+'_'+label,'CURVE');curve.dimensions='3D'
+        curve.resolution_u=resolution;curve.bevel_depth=PROFILE['antenna_radius'];curve.bevel_resolution=3
+        curve.use_fill_caps=True
+        segment=curve.splines.new('BEZIER');segment.bezier_points.add(len(points)-1)
+        origin=points[0][0]
+        for point,(co,left,right,radius) in zip(segment.bezier_points,points):
+            point.co=co-origin;point.handle_left_type=point.handle_right_type='FREE'
+            point.handle_left=left-origin;point.handle_right=right-origin;point.radius=radius
+        obj=bpy.data.objects.new(name+'_'+label,curve);bpy.context.collection.objects.link(obj)
+        obj.parent=parent;obj.data.materials.append(mat)
+        bpy.context.view_layer.objects.active=obj;obj.select_set(True)
+        bpy.ops.object.convert(target='MESH');obj.select_set(False)
+    # Tiny joint caps close the seam during bending; their radius matches the adjacent tube.
+    caps.extend([('mid',radii[2],mid),('tip',radii[4],tip)])
+    for label,scale,parent in caps:
+        radius=PROFILE['antenna_radius']*scale
+        ellipsoid(name+'_joint_'+label,(0,0,0),(radius,radius,radius),mat,parent,segments=16,rings=8)
+    bpy.data.objects.remove(helper,do_unlink=True);bpy.data.curves.remove(guide)
+    return base
 
 
 def aim(obj, target):
