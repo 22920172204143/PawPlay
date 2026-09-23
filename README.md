@@ -2,6 +2,14 @@
 
 An Android app that entertains cats with interactive moving targets on screen.
 
+## 虫子 3D 复现工作
+
+2026-09-23 启动参考视频复现规划，验收端为 Android 手机。当前完成调研和规划，3D 模型与渲染接入尚未实现。
+
+- [技术路线与分阶段计划](docs/realistic-insect-plan.md)
+- [参考视频与源码分析](docs/reference-analysis.md)
+- [视觉迭代与用户确认记录](docs/iteration-log.md)
+
 ## Features
 
 - **10 toy types**: Laser dot, fish, cockroach, butterfly, mouse, spider, bee, feather, bird, yarn ball

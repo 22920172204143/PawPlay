@@ -36,6 +36,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-3d-preview"
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
@@ -98,4 +102,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // Java APIs avoid upgrading the existing Kotlin/Compose toolchain for this preview.
+    val filamentVersion = "1.68.5"
+    debugImplementation("com.google.android.filament:filament-android:$filamentVersion") {
+        exclude(group = "androidx.annotation", module = "annotation")
+    }
+    debugImplementation("com.google.android.filament:gltfio-android:$filamentVersion") {
+        exclude(group = "androidx.annotation", module = "annotation")
+    }
 }

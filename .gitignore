@@ -15,3 +15,7 @@ local.properties
 *.keystore
 keystore.properties
 keystore/
+/.local/
+
+*.blend1
+__pycache__/
