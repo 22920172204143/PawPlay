@@ -24,7 +24,6 @@ import com.google.android.filament.gltfio.UbershaderProvider
 import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
@@ -65,13 +64,18 @@ class LadybugRenderer(
     private var renderedFrames = 0
     private var joints = emptyList<Joint>()
     private var restOpening = 13f
-    private var swing = 7f
-    private var period = 2.6
+    private lateinit var motion: WingMotion
     private val matrix = FloatArray(16)
 
     var mode = Mode.FRONT
     var animated = false
     var opening = 13f
+        set(value) {
+            field = value
+            if (!animated && ::motion.isInitialized) motion.setRestOpening(value.toDouble())
+        }
+
+    fun selectMotion(id: String) { motion.select(id); animated = true }
 
     private data class Joint(val name: String, val instance: Int, val base: FloatArray)
 
@@ -82,8 +86,21 @@ class LadybugRenderer(
             }
             restOpening = profile.getDouble("shell_open_degrees").toFloat()
             opening = restOpening
-            swing = profile.getDouble("shell_swing_degrees").toFloat()
-            period = profile.getDouble("shell_period_seconds")
+            val motionProfile = profile.getJSONObject("motion")
+            fun pair(json: JSONObject, key: String): Pair<Double, Double> {
+                val values = json.getJSONArray(key)
+                return values.getDouble(0) to values.getDouble(1)
+            }
+            val modes = motionProfile.getJSONArray("modes")
+            motion = WingMotion(WingMotion.Config(
+                motionProfile.getLong("seed"), motionProfile.getDouble("transition_seconds"),
+                motionProfile.getDouble("max_open_degrees"),
+                List(modes.length()) { i ->
+                    val m = modes.getJSONObject(i)
+                    WingMotion.Mode(m.getString("id"), m.getString("label"), pair(m, "duration"),
+                        pair(m, "frequency"), pair(m, "center"), pair(m, "amplitude"),
+                        m.getDouble("open_fraction"), m.getDouble("crest_hold"), m.getDouble("asymmetry"))
+                }), restOpening.toDouble())
             camera.setExposure(1f)
             view.scene = scene
             view.camera = camera
@@ -126,7 +143,7 @@ class LadybugRenderer(
             }
             uiHelper.attachTo(surface)
             Log.i(TAG, "model_loaded revision=${profile.getInt("revision")} parts=${bug.entities.size}")
-            onStatus("模型已加载 · 第一轮造型预览")
+            onStatus("模型已加载 · 头部与动作细化")
         } catch (failure: Throwable) {
             close()
             throw failure
@@ -167,14 +184,15 @@ class LadybugRenderer(
         lastFrame = frameTimeNanos
         if (animated) {
             elapsed += delta
-            opening = restOpening + sin(elapsed * 2 * PI / period).toFloat() * swing
+            val pose = motion.advance(delta)
+            opening = ((pose.left + pose.right) / 2).toFloat()
         }
         for (joint in joints) {
             val degrees = when (joint.name) {
-                "shell_left_hinge" -> -(opening - restOpening)
-                "shell_right_hinge" -> opening - restOpening
-                "antenna_left_pivot" -> if (animated) (sin(elapsed * 2.1) * 1.43).toFloat() else 0f
-                else -> if (animated) (sin(elapsed * 2.1 + .8) * 1.43).toFloat() else 0f
+                "shell_left_hinge" -> -(motion.pose.left.toFloat() - restOpening)
+                "shell_right_hinge" -> motion.pose.right.toFloat() - restOpening
+                "antenna_left_pivot" -> motion.pose.antennaLeft.toFloat()
+                else -> motion.pose.antennaRight.toFloat()
             }
             joint.base.copyInto(matrix)
             Matrix.rotateM(matrix, 0, degrees, 0f, 1f, 0f)
@@ -191,7 +209,7 @@ class LadybugRenderer(
         val statsSeconds = (frameTimeNanos - statsStart) / 1e9
         if (statsSeconds >= 1.0) {
             val fps = (renderedFrames / statsSeconds).toInt()
-            onStatus("模型预览 · $fps 帧/秒 · 尚待视觉验收")
+            onStatus("${if (animated) motion.pose.label else "动作已暂停"} · $fps 帧/秒 · 尚待视觉验收")
             statsStart = frameTimeNanos
             renderedFrames = 0
         }

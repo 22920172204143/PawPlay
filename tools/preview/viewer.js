@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {WingMotion} from './wing-motion.mjs';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
 const viewport=document.querySelector('#viewport');
@@ -11,7 +12,8 @@ viewport.append(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#202820');
 const camera=new THREE.OrthographicCamera(-1.3,1.3,1.3,-1.3,.01,100);
 const loader=new GLTFLoader();
-let profile,bug,left,right,antLeft,antRight;
+let profile,bug,left,right,antLeft,antRight,motion;
+let showingPrevious=false;
 let mode='front',playing=false,elapsed=0,lastTime=0,opening=13;
 window.reviewState={loaded:false,frames:0,mode};
 
@@ -37,16 +39,25 @@ document.querySelector('#play').onclick=()=>{
   playing=!playing;document.querySelector('#play').textContent=playing?'暂停动作':'播放动作';
 };
 document.querySelector('#opening').oninput=e=>{
-  playing=false;document.querySelector('#play').textContent='播放动作';opening=Number(e.target.value);
+  playing=false;document.querySelector('#play').textContent='播放动作';opening=Number(e.target.value);motion?.setRestOpening(opening);
 };
+document.querySelector('#motion').onchange=e=>{motion.select(e.target.value);playing=true;document.querySelector('#play').textContent='暂停动作';};
 function frame(now){
   const dt=lastTime?Math.min((now-lastTime)/1000,.05):0;lastTime=now;
   if(playing)elapsed+=dt;
   if(bug){
-    if(playing)opening=profile.shell_open_degrees+Math.sin(elapsed*2*Math.PI/profile.shell_period_seconds)*profile.shell_swing_degrees;
-    left.rotation.y=-THREE.MathUtils.degToRad(opening);right.rotation.y=THREE.MathUtils.degToRad(opening);
-    antLeft.rotation.y=playing?Math.sin(elapsed*2.1)*.025:0;
-    antRight.rotation.y=playing?Math.sin(elapsed*2.1+.8)*.025:0;
+    if(playing)motion.advance(dt);
+    const pose=motion.pose;
+    if(showingPrevious){
+      if(playing)opening=profile.shell_open_degrees+Math.sin(elapsed*2*Math.PI/profile.shell_period_seconds)*profile.shell_swing_degrees;
+      left.rotation.y=-THREE.MathUtils.degToRad(opening);right.rotation.y=THREE.MathUtils.degToRad(opening);
+      antLeft.rotation.y=THREE.MathUtils.degToRad(pose.antennaLeft);antRight.rotation.y=THREE.MathUtils.degToRad(pose.antennaRight);
+    }else{
+      left.rotation.y=-THREE.MathUtils.degToRad(pose.left);right.rotation.y=THREE.MathUtils.degToRad(pose.right);
+      antLeft.rotation.y=THREE.MathUtils.degToRad(pose.antennaLeft);antRight.rotation.y=THREE.MathUtils.degToRad(pose.antennaRight);
+      opening=(pose.left+pose.right)/2;
+    }
+    document.querySelector('#motion-state').textContent=showingPrevious?'上一版：固定周期':(playing?pose.label:'动作已暂停');
     document.querySelector('#opening').value=opening;
     document.querySelector('#angle').value=opening.toFixed(1)+'°';
     updateCamera();renderer.render(scene,camera);window.reviewState.frames++;
@@ -55,6 +66,7 @@ function frame(now){
 }
 try{
   profile=await fetch('/app/src/main/assets/profiles/reference_ladybug.json').then(r=>{if(!r.ok)throw Error(r.status);return r.json()});
+  motion=new WingMotion(profile.motion,profile.shell_open_degrees);
   const [model,stage]=await Promise.all([
     loader.loadAsync('/app/src/main/assets/models/reference_ladybug.glb'),
     loader.loadAsync('/app/src/main/assets/models/reference_stage.glb')]);
@@ -65,21 +77,21 @@ try{
   scene.add(stage.scene,bug);updateCamera();resize();
   const current=bug;
   // The approved baseline is local review evidence; absence must not block a fresh clone.
-  loader.loadAsync('/.local/reviews/p1/approved-r1/reference_ladybug.glb').then(previous=>{
+  loader.loadAsync('/.local/reviews/p1/approved-r2/reference_ladybug.glb').then(previous=>{
     previous.scene.visible=false;scene.add(previous.scene);
     const compare=document.querySelector('#compare');compare.disabled=false;
     compare.onclick=()=>{
-      const isPrevious=bug===current;
+      const isPrevious=bug===current;showingPrevious=isPrevious;
       current.visible=!isPrevious;previous.scene.visible=isPrevious;
       bug=isPrevious?previous.scene:current;
       left=bug.getObjectByName('shell_left_hinge');right=bug.getObjectByName('shell_right_hinge');
       antLeft=bug.getObjectByName('antenna_left_pivot');antRight=bug.getObjectByName('antenna_right_pivot');
       compare.textContent=isPrevious?'返回本轮':'查看上一版';
-      status.textContent=isPrevious?'上一版 · 已认可':'本轮 · 非对称与明暗';
+      status.textContent=isPrevious?'上一版 · 已认可':'本轮 · 头部与动作细化';
     };
   }).catch(()=>{document.querySelector('#compare').hidden=true;});
   window.reviewState.loaded=true;
-  status.textContent='本轮 · 非对称与明暗';
+  status.textContent='本轮 · 头部与动作细化';
   const params=new URLSearchParams(location.search);
   if(params.has('view'))selectMode(params.get('view'));
   if(params.has('time'))elapsed=Number(params.get('time'));

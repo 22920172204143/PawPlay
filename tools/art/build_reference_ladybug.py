@@ -59,15 +59,37 @@ def textures():
         tint = np.array(PROFILE['spot_srgb']) + np.array([4*math.sin(i),0,3*math.cos(i)])
         base = base*(1-opacity[:,:,None])+tint*opacity[:,:,None]
     png(folder / 'shell_basecolor.png', base)
-    base = np.broadcast_to(np.array(PROFILE['abdomen_srgb'], dtype=float), (n, n, 3)).copy()
-    edge = np.clip(np.hypot(x/.48,y/.49),0,1)**2
-    base[:,:,1] -= 26*edge + 9*np.clip(-y*2,0,1)
-    base[:,:,2] -= 24*edge
-    for cx, cy, radius in [(-.14,.23,.11),(.12,.13,.085),(-.035,-.07,.10),(.21,-.20,.11),(-.16,-.30,.08)]:
-        d = np.hypot(x-cx, y-cy) / radius
-        mask = np.clip((1.02-d) * 13, 0, 1) * .27
-        base = base * (1-mask[:, :, None]) + np.array([255,255,131]) * mask[:, :, None]
-    png(folder / 'abdomen_basecolor.png', base)
+    # Paint the visible central wedge itself: most of the abdomen edge sits under the shells.
+    front = np.clip((y+.48)/.96,0,1)
+    core = np.exp(-(((x+.035)/.20)**2+((y+.05)/.50)**2))
+    base = np.empty((n,n,3),dtype=float)
+    base[:,:,0] = 255
+    base[:,:,1] = 200 + 37*front + 18*core
+    base[:,:,2] = 21 + 29*front + 23*core
+    right_shade = np.clip(x/.25,0,1)**1.4
+    base[:,:,1] -= 20*right_shade
+    base[:,:,2] -= 8*right_shade
+    # Pale paw-shaped marking becomes visible when the shells open widely.
+    for cx, cy, rx, ry in [(-.195,.015,.055,.075),(-.076,.145,.062,.079),(.067,.15,.060,.075),(.189,.025,.052,.071),(.002,-.172,.150,.165)]:
+        d = np.hypot((x-cx)/rx, (y-cy)/ry)
+        mask = np.clip((1.06-d)*8,0,1)*.34
+        base = base*(1-mask[:,:,None])+np.array([255,255,139])*mask[:,:,None]
+    png(folder / 'abdomen_basecolor.png',base)
+
+    # Dedicated head UVs cover the whole head, rather than a tiny crop of the abdomen map.
+    # The visible cap occupies the forward half: bright crown, orange lower edge.
+    front = np.clip((y+.025)/.31,0,1)
+    front = front*front*(3-2*front)
+    low = np.array(PROFILE['head_shadow_srgb'],dtype=float)
+    high = np.array(PROFILE['head_highlight_srgb'],dtype=float)
+    base = low[None,None,:]*(1-front[:,:,None])+high[None,None,:]*front[:,:,None]
+    side = np.clip(np.abs(x)*2,0,1)**2.5
+    base[:,:,1] -= 17*side
+    base[:,:,2] -= 9*side
+    glow = np.exp(-(((x+.065)/.24)**2+((y-.24)/.19)**2))
+    base[:,:,1] += 7*glow
+    base[:,:,2] += 10*glow
+    png(folder/'head_basecolor.png',base)
 
 
 def linear(srgb):
@@ -114,12 +136,12 @@ def empty(name, parent=None, location=(0,0,0)):
     return obj
 
 
-def uv_planar(mesh):
+def uv_planar(mesh, extent=(1,1)):
     layer = mesh.uv_layers.new(name='UVMap')
     for poly in mesh.polygons:
         for index in poly.loop_indices:
             co = mesh.vertices[mesh.loops[index].vertex_index].co
-            layer.data[index].uv = (co.x + .5, co.y + .5)
+            layer.data[index].uv = (co.x / extent[0] + .5, co.y / extent[1] + .5)
 
 
 def shell(name, side, mat, root):
@@ -174,32 +196,29 @@ def shell(name, side, mat, root):
     return pivot
 
 
-def ellipsoid(name, location, scale, mat, parent, planar=False):
+def ellipsoid(name, location, scale, mat, parent, planar=False, uv_extent=(1,1)):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=48,ring_count=24,location=location)
     obj=bpy.context.object;obj.name=name;obj.scale=scale
     bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
     obj.parent=parent;obj.data.materials.append(mat)
     if planar:
         for layer in list(obj.data.uv_layers):obj.data.uv_layers.remove(layer)
-        uv_planar(obj.data)
+        uv_planar(obj.data,uv_extent)
     for p in obj.data.polygons:p.use_smooth=True
     obj.select_set(False)
     return obj
 
 
 def antenna(name,side,mat,root):
-    pivot=empty(name+'_pivot',root,(side*.105,.555,.145))
+    coords=PROFILE['antenna_left_points' if side<0 else 'antenna_right_points']
+    anchor_x,anchor_y=coords[0]
+    pivot=empty(name+'_pivot',root,(side*anchor_x,anchor_y,.172))
     curve=bpy.data.curves.new(name,'CURVE');curve.dimensions='3D'
-    curve.resolution_u=12;curve.bevel_depth=.0065;curve.bevel_resolution=3
-    spline=curve.splines.new('BEZIER')
-    coords=[(.105,.555),(.145,.69),(.19,.82),(.29,.865),(.39,.815),(.39,.715),(.33,.686),(.278,.733),(.288,.781)]
-    if PROFILE.get('contour_asymmetry'):
-        coords = ([(.105,.555),(.157,.690),(.216,.819),(.318,.873),(.422,.807),(.404,.702),(.338,.674),(.283,.719),(.286,.768)]
-                  if side < 0 else
-                  [(.105,.555),(.127,.687),(.172,.824),(.253,.884),(.331,.853),(.350,.784),(.311,.746),(.271,.765),(.278,.803)])
-    spline.bezier_points.add(len(coords)-1)
-    for point,(x,y) in zip(spline.bezier_points,coords):
-        point.co=(side*(x-.105),y-.555, .013*math.sin((y-.555)*7))
+    curve.resolution_u=12;curve.bevel_depth=PROFILE['antenna_radius'];curve.bevel_resolution=3
+    spline=curve.splines.new('BEZIER');spline.bezier_points.add(len(coords)-1)
+    for i,(point,(x,y)) in enumerate(zip(spline.bezier_points,coords)):
+        point.co=(side*(x-anchor_x),y-anchor_y,.013*math.sin((y-anchor_y)*7))
+        point.radius=1-.22*i/(len(coords)-1)
         point.handle_left_type=point.handle_right_type='AUTO'
     obj=bpy.data.objects.new(name,curve);bpy.context.collection.objects.link(obj);obj.parent=pivot
     obj.data.materials.append(mat)
@@ -218,14 +237,14 @@ def build():
     # Geometry remains fully three-dimensional and can be relit by replacing materials.
     shell_mat=material('shell_red_spotted',PROFILE['shell_srgb'],ART/'textures/shell_basecolor.png',unlit=True)
     abdomen_mat=material('abdomen_yellow',PROFILE['abdomen_srgb'],ART/'textures/abdomen_basecolor.png',unlit=True)
-    gold=material('head_gold',[255,225,64],ART/'textures/abdomen_basecolor.png',unlit=True)
+    gold=material('head_gold',[255,225,64],ART/'textures/head_basecolor.png',unlit=True)
     antenna_mat=material('antenna_gold',PROFILE['antenna_srgb'],unlit=True)
     eye_mat=material('eyes_teal',[32,146,168],unlit=True)
     root=empty('ladybug_root')
     ellipsoid('abdomen',(0,0,.083),(.463,.468,.09),abdomen_mat,root,planar=True)
-    ellipsoid('head',(0,.478,.11),(.179,.145,.066),gold,root,planar=True)
+    ellipsoid('head',PROFILE['head_center'],PROFILE['head_scale'],gold,root,planar=True,uv_extent=PROFILE['head_texture_extent'])
     for side in [-1,1]:
-        ellipsoid('eye_left' if side<0 else 'eye_right',(side*.065,.581,.159),(.015,.019,.007),eye_mat,root)
+        ellipsoid('eye_left' if side<0 else 'eye_right',(side*.070,.648+(side*.006),.174),(.0165,.020,.007),eye_mat,root)
         antenna('antenna_left' if side<0 else 'antenna_right',side,antenna_mat,root)
         shell('shell_left' if side<0 else 'shell_right',side,shell_mat,root)
     return root

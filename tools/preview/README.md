@@ -14,3 +14,5 @@ python tools/preview/serve.py
 模型重新生成：Blender 4.5.9 运行 `--background --python-exit-code 1 --python tools/art/build_reference_ladybug.py`。参数在 art/insects/reference_ladybug/model.json。导出坐标 +Y 向上、-Z 朝前。材质使用自制颜色贴图表现明暗，保留实际三维曲面。
 
 Android：配置 JDK 17 与 Android SDK 34 后运行 `gradlew.bat :app:assembleDebug :app:lintDebug`。debug 是独立安装的瓢虫预览，release 保留原游戏入口。
+
+动作参数与调节方式见 [翅壳动作分析](../../docs/wing-motion-analysis.md)。浏览器动作用 `node --test tools/preview/wing-motion.test.mjs` 检查。点击播放后默认自然变化，也可单独选择模式。

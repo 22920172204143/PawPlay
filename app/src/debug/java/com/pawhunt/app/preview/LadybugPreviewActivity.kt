@@ -7,6 +7,11 @@ import android.util.Log
 import android.view.Gravity
 import android.view.SurfaceView
 import android.view.WindowManager
+import android.view.View
+import android.view.ContextThemeWrapper
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -63,6 +68,19 @@ class LadybugPreviewActivity : Activity() {
             renderer?.let { it.animated = !it.animated; play.text = if (it.animated) "暂停" else "播放" }
         }
         layout.addView(controls)
+        layout.addView(Spinner(ContextThemeWrapper(this, android.R.style.Theme_Material)).apply {
+            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item,
+                listOf("自然变化", "缓慢开合", "短促连拍", "展翅停留", "轻收停顿"))
+            var initialSelection = true
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    if (initialSelection) { initialSelection = false; return }
+                    renderer?.selectMotion(listOf("auto", "gentle", "flutter", "spread", "settle")[position])
+                    play.text = "暂停"
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         val openingLabel = TextView(this).apply {
             text = "翅壳开合"
             textSize = 12f
@@ -71,7 +89,7 @@ class LadybugPreviewActivity : Activity() {
         }
         layout.addView(openingLabel)
         layout.addView(SeekBar(this).apply {
-            max = 52
+            max = 110
             progress = 26
             setPadding(dp(20), 0, dp(20), 0)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -85,7 +103,7 @@ class LadybugPreviewActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(42)))
         layout.addView(TextView(this).apply {
-            text = "第一轮：核对造型与颜色。移动、光晕和拖尾后续对齐。"
+            text = "头部与动作细化：可观察自然节奏，也可单独选择拍动方式。"
             textSize = 11f
             setTextColor(Color.rgb(137, 153, 140))
             setPadding(dp(20), dp(4), dp(20), dp(16))

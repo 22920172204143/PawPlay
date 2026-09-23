@@ -4,7 +4,7 @@
 <title>PawPlay · 瓢虫模型预览</title>
 <link rel="stylesheet" href="style.css">
 <script type="importmap">{"imports":{"three":"/.local/web/vendor/three/build/three.module.js","three/addons/":"/.local/web/vendor/three/examples/jsm/"}}</script>
-<header><div><span class="eyebrow">PawPlay / 轮廓与明暗细化</span><h1>红黄小瓢虫</h1><p>先核对造型、比例与颜色，再继续打磨动作和光效。</p></div><span class="badge">待视觉验收</span></header>
+<header><div><span class="eyebrow">PawPlay / 头部比例与动作节奏</span><h1>红黄小瓢虫</h1><p>先核对造型、比例与颜色，再继续打磨动作和光效。</p></div><span class="badge">待视觉验收</span></header>
 <main>
   <section class="comparison">
     <article><div class="panel-title"><h2>视频参考</h2><span>13 秒 · 局部放大</span></div><div class="reference"><img src="/.local/reviews/p1/reference-front.png" alt="原视频第13秒的瓢虫局部"></div><p class="caption">来自你提供的视频。保留原始细节，仅裁剪和放大。</p></article>
@@ -12,9 +12,10 @@
   </section>
   <div class="controls">
     <div class="buttons"><button id="front" class="selected">俯视对比</button><button id="volume">旋转观察</button><button id="scale">参考尺寸</button><button id="play">播放动作</button><button id="compare" disabled>查看上一版</button></div>
-    <label>翅壳开合 <input id="opening" type="range" min="0" max="26" step="0.5" value="13"><output id="angle">13°</output></label>
+    <label>动作节奏 <select id="motion"><option value="auto">自然变化</option><option value="gentle">缓慢开合</option><option value="flutter">短促连拍</option><option value="spread">展翅停留</option><option value="settle">轻收停顿</option></select><span id="motion-state">动作已暂停</span></label>
+    <label>翅壳开合 <input id="opening" type="range" min="0" max="55" step="0.5" value="13"><output id="angle">13°</output></label>
   </div>
-  <div class="note"><strong>本轮看什么</strong><span>本轮调整左右触角与壳形的细微差异、非镜像斑点和壳面明暗。可切换上一版比较。当前开合是初版参数动画，移动轨迹、光晕和星星拖尾将在下一阶段对齐。</span></div>
+  <div class="note"><strong>本轮看什么</strong><span>头部放大约 40%，加强亮黄到橙黄的渐变，拉开两根触角的形状差异。点击播放，观察慢开合、短连拍、展翅与轻收之间的自然切换；也可单独选择动作。移动、光晕和星星拖尾仍待下一阶段对齐。</span></div>
   <details><summary>展开原始参考视频</summary><video controls muted preload="metadata" src="/.local/reference/reference.mp4"></video></details>
 </main>
 <footer>本机预览 · 未发布 · Android 手机仍需单独验证</footer>
