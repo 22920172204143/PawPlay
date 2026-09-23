@@ -19,6 +19,7 @@ function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.
 new ResizeObserver(resize).observe(viewport);
 function selectMode(value){
   mode=value;window.reviewState.mode=mode;
+  if(mode==='volume'){playing=true;document.querySelector('#play').textContent='暂停动作';}
   for(const id of ['front','volume','scale'])document.getElementById(id).classList.toggle('selected',id===value);
   updateCamera();
 }
@@ -62,8 +63,23 @@ try{
   antLeft=bug.getObjectByName('antenna_left_pivot');antRight=bug.getObjectByName('antenna_right_pivot');
   if(!left||!right||!antLeft||!antRight)throw Error('模型部件不完整');
   scene.add(stage.scene,bug);updateCamera();resize();
+  const current=bug;
+  // The approved baseline is local review evidence; absence must not block a fresh clone.
+  loader.loadAsync('/.local/reviews/p1/approved-r1/reference_ladybug.glb').then(previous=>{
+    previous.scene.visible=false;scene.add(previous.scene);
+    const compare=document.querySelector('#compare');compare.disabled=false;
+    compare.onclick=()=>{
+      const isPrevious=bug===current;
+      current.visible=!isPrevious;previous.scene.visible=isPrevious;
+      bug=isPrevious?previous.scene:current;
+      left=bug.getObjectByName('shell_left_hinge');right=bug.getObjectByName('shell_right_hinge');
+      antLeft=bug.getObjectByName('antenna_left_pivot');antRight=bug.getObjectByName('antenna_right_pivot');
+      compare.textContent=isPrevious?'返回本轮':'查看上一版';
+      status.textContent=isPrevious?'上一版 · 已认可':'本轮 · 非对称与明暗';
+    };
+  }).catch(()=>{document.querySelector('#compare').hidden=true;});
   window.reviewState.loaded=true;
-  status.textContent='模型已加载 · 可旋转';
+  status.textContent='本轮 · 非对称与明暗';
   const params=new URLSearchParams(location.search);
   if(params.has('view'))selectMode(params.get('view'));
   if(params.has('time'))elapsed=Number(params.get('time'));

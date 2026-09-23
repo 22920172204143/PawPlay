@@ -33,4 +33,13 @@
 - Android APK：app/build/outputs/apk/debug/app-debug.apk；未连接手机，实机运行/性能待验证。
 - 用户认可：“可以的，已经非常接近了”。此版本可提交；新增非对称与色调改进另作下一轮验收。
 - 已知差距：左右镜像过强、弧线规整、色调层次不足；完整移动/光晕/星尾未实现。
-- 提交推送：待配置提交署名后执行，以 Git 历史和远端核对结果为准。
+- 提交推送：已推送 `92e63804338b3225a6f3c38eea46ff1c4c5efa05` 至 `origin/feat/reference-ladybug-3d`，`git ls-remote` 核对远端 SHA 一致。GitHub：https://github.com/22920172204143/PawPlay/commit/92e63804338b3225a6f3c38eea46ff1c4c5efa05 。
+
+## 2026-09-23 / P1 / revision 2（用户认可方向）
+
+- 根据用户反馈增加：非镜像触角、平滑但轻微不规则的壳边、独立斑点布局和椭圆度、红壳及黄腹明暗渐变。
+- 明暗为自制颜色贴图，glTF unlit 保持跨渲染器色彩一致；几何仍为真正三维，并非视频抠图。
+- 预览新增上一版切换；上一版保存在 .local/reviews/p1/approved-r1。
+- Blender 导出与多方向渲染成功；GLB 结构/关键节点/材质/profile 一致性检查通过；Android assembleDebug 成功。
+- 浏览器加载与版本切换通过；手机实机仍待验证。
+- 用户认可“这个方向是对的”，本轮存档并推送；后续继续加大头部、触角差异及黄色区域渐变，另作 revision 3 验收。

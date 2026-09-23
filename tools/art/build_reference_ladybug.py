@@ -41,15 +41,28 @@ def textures():
     x = x / (n - 1) - 0.5
     y = 0.5 - y / (n - 1)
     base = np.broadcast_to(np.array(PROFILE['shell_srgb'], dtype=float), (n, n, 3)).copy()
-    base[:, :, 0] += 7 * y - 7 * x
-    base[:, :, 2] += -12 * y
-    for sx, sy, radius in PROFILE['spots']:
-        for mirror in [-1, 1]:
-            d = np.sqrt(((x - mirror * abs(sx)) / radius) ** 2 + ((y - sy) / radius) ** 2)
-            opacity = np.clip((1.18 - d) / 0.42, 0, 1) * 0.83
-            base = base * (1 - opacity[:, :, None]) + np.array(PROFILE['spot_srgb']) * opacity[:, :, None]
+    # Broad pigment gradients describe the shallow convex shell without a plastic highlight.
+    radial = np.clip(np.hypot(x / .49, y / .50), 0, 1)
+    shoulder = np.exp(-(((x + .19) / .36)**2 + ((y - .23) / .40)**2))
+    edge = radial**3
+    base[:, :, 0] += 15*shoulder - 23*edge - 7*np.clip(-y*2,0,1)
+    base[:, :, 1] += 3*shoulder
+    base[:, :, 2] += 7*edge - 13*shoulder + 6*np.clip(-y*2,0,1)
+    for i, (sx, sy, radius) in enumerate(PROFILE['spots']):
+        angle = .31*math.sin(i*1.7)
+        dx, dy = x-sx, y-sy
+        u = (dx*math.cos(angle)+dy*math.sin(angle))/(radius*(1+.10*math.sin(i*2.3)))
+        v = (-dx*math.sin(angle)+dy*math.cos(angle))/(radius*(.92+.08*math.cos(i)))
+        d = np.hypot(u,v)
+        d *= 1+.045*np.sin(np.arctan2(v,u)*3+i)
+        opacity = np.clip((1.20-d)/.49,0,1)*(.75+.07*math.sin(i*1.3))
+        tint = np.array(PROFILE['spot_srgb']) + np.array([4*math.sin(i),0,3*math.cos(i)])
+        base = base*(1-opacity[:,:,None])+tint*opacity[:,:,None]
     png(folder / 'shell_basecolor.png', base)
     base = np.broadcast_to(np.array(PROFILE['abdomen_srgb'], dtype=float), (n, n, 3)).copy()
+    edge = np.clip(np.hypot(x/.48,y/.49),0,1)**2
+    base[:,:,1] -= 26*edge + 9*np.clip(-y*2,0,1)
+    base[:,:,2] -= 24*edge
     for cx, cy, radius in [(-.14,.23,.11),(.12,.13,.085),(-.035,-.07,.10),(.21,-.20,.11),(-.16,-.30,.08)]:
         d = np.hypot(x-cx, y-cy) / radius
         mask = np.clip((1.02-d) * 13, 0, 1) * .27
@@ -121,6 +134,12 @@ def shell(name, side, mat, root):
             x = math.cos(angle) * radius * r * (-side)
             y = math.sin(angle) * radius * r
             z = PROFILE['shell_base_height'] + PROFILE['shell_height'] * math.sqrt(max(0,1-r*r))
+            # Low frequency contour variation: broad shoulders, a slightly uneven taper.
+            # No random per-vertex noise, so the silhouette stays smooth at phone size.
+            if PROFILE.get('contour_asymmetry'):
+                x *= 1 + (.026 if side < 0 else -.018)*math.sin(angle*2+.4) + .018*math.cos(angle*3+.7*side)
+                y += r*r*(.010*math.cos(angle*2+side*.8) + .006*side)
+                z += .003*r*math.sin(angle*2+side)
             vertices.append((x,y,z))
     faces = []
     for j in range(angular):
@@ -174,6 +193,10 @@ def antenna(name,side,mat,root):
     curve.resolution_u=12;curve.bevel_depth=.0065;curve.bevel_resolution=3
     spline=curve.splines.new('BEZIER')
     coords=[(.105,.555),(.145,.69),(.19,.82),(.29,.865),(.39,.815),(.39,.715),(.33,.686),(.278,.733),(.288,.781)]
+    if PROFILE.get('contour_asymmetry'):
+        coords = ([(.105,.555),(.157,.690),(.216,.819),(.318,.873),(.422,.807),(.404,.702),(.338,.674),(.283,.719),(.286,.768)]
+                  if side < 0 else
+                  [(.105,.555),(.127,.687),(.172,.824),(.253,.884),(.331,.853),(.350,.784),(.311,.746),(.271,.765),(.278,.803)])
     spline.bezier_points.add(len(coords)-1)
     for point,(x,y) in zip(spline.bezier_points,coords):
         point.co=(side*(x-.105),y-.555, .013*math.sin((y-.555)*7))
@@ -195,12 +218,12 @@ def build():
     # Geometry remains fully three-dimensional and can be relit by replacing materials.
     shell_mat=material('shell_red_spotted',PROFILE['shell_srgb'],ART/'textures/shell_basecolor.png',unlit=True)
     abdomen_mat=material('abdomen_yellow',PROFILE['abdomen_srgb'],ART/'textures/abdomen_basecolor.png',unlit=True)
-    gold=material('head_gold',[255,225,64],unlit=True)
+    gold=material('head_gold',[255,225,64],ART/'textures/abdomen_basecolor.png',unlit=True)
     antenna_mat=material('antenna_gold',PROFILE['antenna_srgb'],unlit=True)
     eye_mat=material('eyes_teal',[32,146,168],unlit=True)
     root=empty('ladybug_root')
     ellipsoid('abdomen',(0,0,.083),(.463,.468,.09),abdomen_mat,root,planar=True)
-    ellipsoid('head',(0,.478,.11),(.179,.145,.066),gold,root)
+    ellipsoid('head',(0,.478,.11),(.179,.145,.066),gold,root,planar=True)
     for side in [-1,1]:
         ellipsoid('eye_left' if side<0 else 'eye_right',(side*.065,.581,.159),(.015,.019,.007),eye_mat,root)
         antenna('antenna_left' if side<0 else 'antenna_right',side,antenna_mat,root)
