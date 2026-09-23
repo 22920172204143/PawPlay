@@ -90,6 +90,17 @@ class LadybugPreviewActivity : Activity() {
             setPadding(dp(16), 0, 0, 0)
             setOnCheckedChangeListener { _, enabled -> renderer?.bodyElastic = enabled }
         }, LinearLayout.LayoutParams(-1, dp(40)))
+        layout.addView(Spinner(ContextThemeWrapper(this, android.R.style.Theme_Material)).apply {
+            contentDescription="拖尾效果"
+            adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,
+                listOf("模型默认拖尾", "金色星星", "彩虹泡泡", "关闭拖尾"))
+            onItemSelectedListener=object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?,view: View?,position: Int,id: Long) {
+                    renderer?.selectTrail(listOf("model","stars","bubbles","none")[position])
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?)=Unit
+            }
+        }, LinearLayout.LayoutParams(-1,dp(40)))
         val openingLabel = TextView(this).apply {
             text = "翅壳开合"
             textSize = 12f
@@ -112,7 +123,7 @@ class LadybugPreviewActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(42)))
         layout.addView(TextView(this).apply {
-            text = "快速观察看大幅拍翅；开关身体弹性，对比轻微挤压和舒展。"
+            text = "切换星星或泡泡；快速移动留下拖尾，慢下来后逐渐消散。"
             textSize = 11f
             setTextColor(Color.rgb(137, 153, 140))
             setPadding(dp(20), dp(4), dp(20), dp(16))

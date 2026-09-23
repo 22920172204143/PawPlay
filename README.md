@@ -4,13 +4,14 @@ An Android app that entertains cats with interactive moving targets on screen.
 
 ## 虫子 3D 复现工作
 
-2026-09-23 启动参考视频复现规划，验收端为 Android 手机。已制作可编辑 3D 模型、浏览器对比与独立 Android 预览；当前已统一运动驱动、完整快拍和轻微身体弹性，并进一步让触角根部沿长度弯曲。Android 构建通过，手机实机验收尚未完成。
+2026-09-23 启动参考视频复现规划，验收端为 Android 手机。已制作可编辑 3D 模型、浏览器对比与独立 Android 预览；运动联动、完整快拍、身体弹性、柔软触角及可按模型选择的星星/彩虹泡泡拖尾已获用户认可。Android 构建通过，手机实机验收尚未完成。
 
 - [技术路线与分阶段计划](docs/realistic-insect-plan.md)
 - [参考视频与源码分析](docs/reference-analysis.md)
 - [视觉迭代与用户确认记录](docs/iteration-log.md)
 - [本地模型预览与重建](tools/preview/README.md)
 - [翅壳动作分析](docs/wing-motion-analysis.md)
+- [星星与泡泡拖尾](docs/trail-effects.md)
 
 ## Features
 

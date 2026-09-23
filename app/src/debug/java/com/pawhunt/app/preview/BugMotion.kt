@@ -80,10 +80,11 @@ class BugMotion(private val config: Config, private var rest: Double = 13.0) {
         goalX=cos(angle)*radius; goalZ=sin(angle)*radius
         if (hypot(goalX-pose.x,goalZ-pose.z)<1.1) { goalX=-goalX; goalZ=-goalZ }
     }
-    fun advance(seconds: Double): Pose {
+    @JvmOverloads
+    fun advance(seconds: Double, onStep: ((Pose) -> Unit)? = null): Pose {
         require(seconds.isFinite() && seconds>=0) { "Invalid delta" }
         accumulator+=min(seconds,1.0)
-        while (accumulator+1e-10>=STEP) { tick(); accumulator-=STEP }
+        while (accumulator+1e-10>=STEP) { tick(); onStep?.invoke(pose); accumulator-=STEP }
         return pose
     }
     private fun tick() {

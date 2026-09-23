@@ -4,19 +4,20 @@
 <title>PawPlay · 瓢虫模型预览</title>
 <link rel="stylesheet" href="style.css">
 <script type="importmap">{"imports":{"three":"/.local/web/vendor/three/build/three.module.js","three/addons/":"/.local/web/vendor/three/examples/jsm/"}}</script>
-<header><div><span class="eyebrow">PawPlay / 触角根部柔软度</span><h1>红黄小瓢虫</h1><p>贴近头部的触角也会弯曲，再带动中段和末梢。</p></div><span class="badge">待视觉验收</span></header>
+<header><div><span class="eyebrow">PawPlay / 运动拖尾</span><h1>红黄小瓢虫</h1><p>金色小星星落在经过的路径上，轻轻飘散；也可以换成彩虹泡泡。</p></div><span class="badge">待视觉验收</span></header>
 <main>
   <section class="comparison">
     <article><div class="panel-title"><h2>视频参考</h2><span id="reference-status">13 秒 · 静态造型</span></div><div class="reference"><img id="reference-still" src="/.local/reviews/p1/reference-front.png" alt="原视频第13秒的瓢虫局部"><video id="reference-motion" controls muted loop playsinline preload="metadata" hidden></video></div><label class="reference-select">原片片段 <select id="reference-clip"><option value="still">静态造型</option><option value="fast-wide">高速 · 大幅拍翅</option><option value="fast-narrow">高速 · 小幅连拍</option><option value="slow">慢速 · 轻柔开合</option></select></label><p class="caption">原片局部裁剪，动态片段保留原始播放速度；短片循环有接缝。</p></article>
-    <article><div class="panel-title"><h2>本轮 3D 模型</h2><span id="status" role="status">正在加载…</span></div><div id="viewport"></div><p class="caption">可独立开合的翅壳、腹部、头部和卷曲触角；同一 GLB 用于 Android。</p></article>
+    <article><div class="panel-title"><h2>本轮 3D 模型</h2><span id="status" role="status">正在加载…</span></div><div id="viewport"></div><p class="caption">观察虫子的造型、翅膀、柔软触角和尾部拖尾。</p></article>
   </section>
   <div class="controls">
-    <div class="buttons"><button id="front" class="selected">跟随近看</button><button id="antenna">触角近看</button><button id="volume">旋转观察</button><button id="scale">场景运动</button><button id="play">播放动作</button><button id="compare" disabled>查看调整前动作</button></div>
+    <div class="buttons"><button id="front" class="selected">跟随近看</button><button id="antenna">触角近看</button><button id="volume">旋转观察</button><button id="scale">场景运动</button><button id="play">播放动作</button><button id="compare" disabled>隐藏拖尾对比</button></div>
     <label>运动节奏 <select id="motion"><option value="auto">自然巡游</option><option value="cruise">慢速观察</option><option value="dash">快速观察</option><option value="pause">短暂停留</option><option value="rebound">加速后停下</option></select><span id="motion-state">动作已暂停</span><span id="speed"></span></label>
     <label>翅壳开合 <input id="opening" type="range" min="0" max="55" step="0.5" value="13"><output id="angle">13°</output></label>
     <label><input id="elastic" type="checkbox" checked>身体弹性</label>
+    <label>拖尾效果 <select id="trail"><option value="model">模型默认 · 星星</option><option value="stars">金色星星</option><option value="bubbles">彩虹泡泡</option><option value="none">关闭</option></select></label>
   </div>
-  <div class="note"><strong>本轮看什么</strong><span>重点看触角贴近头部的两段：沿长度逐渐弯曲，左右有不同的滞后和回弹。“查看调整前动作”沿用同一时刻与路线，暂停后也可比较根部弯曲；“加速后停下”观察余摆。</span></div>
+  <div class="note"><strong>本轮看什么</strong><span>快速移动时连续留下几颗小星星，减速后逐渐稀疏、消散。切换“彩虹泡泡”比较另一种风格；“场景运动”看转弯后的轨迹，“加速后停下”看拖尾收尾。</span></div>
   <details><summary>展开原始参考视频</summary><video controls muted preload="metadata" src="/.local/reference/reference.mp4"></video></details>
 </main>
 <footer>本机预览 · 未发布 · Android 手机仍需单独验证</footer>

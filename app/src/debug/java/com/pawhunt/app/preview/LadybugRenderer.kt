@@ -65,6 +65,9 @@ class LadybugRenderer(
     private var joints = emptyList<Joint>()
     private var restOpening = 13f
     private lateinit var motion: BugMotion
+    private lateinit var trail: BugTrail
+    private lateinit var trailRenderer: TrailRenderer
+    private var defaultTrail="stars"
     private val matrix = FloatArray(16)
 
     var mode = Mode.FRONT
@@ -77,6 +80,7 @@ class LadybugRenderer(
         }
 
     fun selectMotion(id: String) { motion.select(id); animated = true }
+    fun selectTrail(id: String) { trail.select(if(id=="model") defaultTrail else id) }
 
     private val antennaNames = listOf("antenna_left_pivot", "antenna_left_mid_pivot", "antenna_left_tip_pivot",
         "antenna_right_pivot", "antenna_right_mid_pivot", "antenna_right_tip_pivot")
@@ -114,6 +118,20 @@ class LadybugRenderer(
                 BugMotion.Elastic(pair(elastic,"pulse"), elastic.getDouble("acceleration_stretch"),
                     elastic.getDouble("stiffness"), elastic.getDouble("damping")),
                 pair(antennaRoot,"frequency"), pair(antennaRoot,"sway_degrees")), restOpening.toDouble())
+            val trailProfile=profile.getJSONObject("trail")
+            defaultTrail=trailProfile.getString("style")
+            val styleJson=trailProfile.getJSONObject("styles")
+            val trailStyles=styleJson.keys().asSequence().associateWith { id ->
+                val s=styleJson.getJSONObject(id);val palette=s.getJSONArray("palette_srgb")
+                BugTrail.Style(pair(s,"lifetime"),pair(s,"size"),pair(s,"spin"),pair(s,"opacity"),
+                    s.getDouble("drift"),s.getDouble("rise"),s.getDouble("inherit_velocity"),s.getDouble("end_scale"),
+                    List(palette.length()) { i->DoubleArray(3) { k->palette.getJSONArray(i).getDouble(k) } },
+                    s.optDouble("rate_multiplier",1.0))
+            }
+            val capacity=trailProfile.getInt("max_particles")
+            trail=BugTrail(BugTrail.Config(defaultTrail,trailProfile.getLong("seed"),capacity,
+                trailProfile.getDouble("tail_offset"),trailProfile.getDouble("spread"),trailProfile.getDouble("min_speed"),
+                trailProfile.getDouble("full_emission_speed"),trailProfile.getDouble("max_speed"),pair(trailProfile,"rate"),trailStyles))
             camera.setExposure(1f)
             view.scene = scene
             view.camera = camera
@@ -125,6 +143,8 @@ class LadybugRenderer(
             }
             loadAsset("models/reference_stage.glb")
             val bug = loadAsset("models/reference_ladybug.glb")
+            trailRenderer=TrailRenderer(engine,loadAsset("models/insect_trail.glb"),capacity,trailStyles.keys)
+            trailRenderer.update(trail,camera)
             val weights = antennaRoot.getJSONArray("bend_weights")
             val bindings = linkedMapOf<String, Pair<Int, Float>>()
             antennaNames.forEachIndexed { i, name ->
@@ -206,7 +226,7 @@ class LadybugRenderer(
         lastFrame = frameTimeNanos
         if (animated) {
             elapsed += delta
-            val pose = motion.advance(delta)
+            val pose = motion.advance(delta) { trail.step(it) }
             opening = ((pose.wingLeft + pose.wingRight) / 2).toFloat()
         }
         val pose = motion.pose
@@ -229,6 +249,7 @@ class LadybugRenderer(
             engine.transformManager.setTransform(joint.instance, matrix)
         }
         updateCamera()
+        trailRenderer.update(trail,camera)
         val chain = swapChain ?: return
         if (uiHelper.isReadyToRender && renderer.beginFrame(chain, frameTimeNanos)) {
             renderer.render(view)

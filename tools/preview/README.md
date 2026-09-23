@@ -20,7 +20,7 @@ Android：配置 JDK 17 与 Android SDK 34 后运行 `gradlew.bat :app:assembleD
 revision 4 可用“场景运动”看快慢路线、“跟随近看”看姿态联动。下拉框为自然巡游/慢速/快速/停留。检查控制器：
 
 ```powershell
-node --test tools/preview/bug-motion.test.mjs tools/preview/wing-motion.test.mjs
+node --test tools/preview/bug-motion.test.mjs tools/preview/wing-motion.test.mjs tools/preview/bug-trail.test.mjs
 python tools/preview/check-motion-contract.py --java-home <JDK17路径> --stdlib <Gradle缓存中的kotlin-stdlib-1.9.22.jar>
 ```
 
@@ -34,4 +34,12 @@ revision 5 加强触角中段/末梢的柔软度和回弹。选择“加速后�
 
 revision 7 将触角根部改为四段渐进弯曲。点击“触角近看”固定头部朝向并放大根部；需要将该版 GLB 与新 profile 一起使用，Node 检查会校验导出的四段根部层级。
 
-当前 revision 8 加大根部摆幅，并提高贴近头部部分的弯曲比例。“查看调整前动作”使用 `.local/reviews/p1/before-amplitude-r7/` 中的控制器和配置，对照双方各自的弯曲分配；可暂停后比较同一时刻，或选择“加速后停下”观察回弹。当前及对比版本均未获用户验收。
+revision 8 加大根部摆幅，并提高贴近头部部分的弯曲比例，已获用户认可。
+
+revision 9 增加星星和泡泡拖尾。下拉菜单选择“模型默认 / 金色星星 / 透明泡泡 / 关闭”；“隐藏拖尾对比”只改变可见性，保留同一路线和时刻。选择“快速观察”看连续尾迹，“加速后停下”看减速后的消散。本轮无需本地旧版快照即可对比。
+
+revision 10 将星星发射密度提高 50%、尺寸提高 40%；模型可用样式级 `rate_multiplier` 单独调节数量，不影响其他拖尾样式。
+
+当前 revision 11 加强泡泡的彩虹反光、弧形高光和边缘可见度。选择“彩虹泡泡”查看；本轮需要同步最新 `insect_trail.glb` 和 profile。
+
+拖尾资产重建：`python tools/art/build_trail_assets.py`，仅使用 Python 标准库。参数和按模型选择方式见 [拖尾效果](../../docs/trail-effects.md)。Android 预览也有同样的样式选择；跨运行时脚本现在同时比较运动和粒子生命周期，运行前需重新 assembleDebug。

@@ -49,10 +49,10 @@ export class BugMotion {
     this.goalX=Math.cos(angle)*radius;this.goalZ=Math.sin(angle)*radius;
     if(Math.hypot(this.goalX-this.pose.x,this.goalZ-this.pose.z)<1.1){this.goalX=-this.goalX;this.goalZ=-this.goalZ}
   }
-  advance(seconds){
+  advance(seconds,onStep){
     if(!Number.isFinite(seconds)||seconds<0)throw Error('Invalid delta');
     this.accumulator+=Math.min(seconds,1);
-    while(this.accumulator+1e-10>=STEP){this.tick();this.accumulator-=STEP}
+    while(this.accumulator+1e-10>=STEP){this.tick();onStep?.(this.pose);this.accumulator-=STEP}
     return this.pose;
   }
   tick(){
